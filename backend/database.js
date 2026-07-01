@@ -76,13 +76,11 @@ function initializeTables() {
         });
 
         // Индексы для оптимизации запросов
-        setTimeout(() => {
-            db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+                    db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
             db.run('CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname)');
             db.run('CREATE INDEX IF NOT EXISTS idx_users_isAdmin ON users(isAdmin)');
             db.run('CREATE INDEX IF NOT EXISTS idx_users_createdAt ON users(createdAt)');
             db.run('CREATE INDEX IF NOT EXISTS idx_users_lockedUntil ON users(lockedUntil)');
-        }, 100);
 
         // ==================== 2. SESSIONS TABLE ====================
         db.run(`
@@ -104,11 +102,9 @@ function initializeTables() {
             }
         });
 
-        setTimeout(() => {
-            db.run('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
+                    db.run('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
             db.run('CREATE INDEX IF NOT EXISTS idx_sessions_userId ON sessions(userId)');
             db.run('CREATE INDEX IF NOT EXISTS idx_sessions_expiresAt ON sessions(expiresAt)');
-        }, 100);
 
         // ==================== 3. AUDIT LOG TABLE ====================
         db.run(`
@@ -132,11 +128,9 @@ function initializeTables() {
             }
         });
 
-        setTimeout(() => {
-            db.run('CREATE INDEX IF NOT EXISTS idx_auditLog_userId ON auditLog(userId)');
+                    db.run('CREATE INDEX IF NOT EXISTS idx_auditLog_userId ON auditLog(userId)');
             db.run('CREATE INDEX IF NOT EXISTS idx_auditLog_action ON auditLog(action)');
             db.run('CREATE INDEX IF NOT EXISTS idx_auditLog_createdAt ON auditLog(createdAt)');
-        }, 100);
 
         // ==================== 4. PASSWORD RESET TABLE ====================
         db.run(`
@@ -157,10 +151,8 @@ function initializeTables() {
             }
         });
 
-        setTimeout(() => {
-            db.run('CREATE INDEX IF NOT EXISTS idx_passwordResets_token ON passwordResets(token)');
+                    db.run('CREATE INDEX IF NOT EXISTS idx_passwordResets_token ON passwordResets(token)');
             db.run('CREATE INDEX IF NOT EXISTS idx_passwordResets_expiresAt ON passwordResets(expiresAt)');
-        }, 100);
 
         // ==================== 5. LECTURES TABLE ====================
         db.run(`
@@ -238,9 +230,7 @@ function initializeTables() {
         });
 
         // ==================== 7. CREATE DEFAULT ADMIN ====================
-        setTimeout(() => {
-            createDefaultAdmin();
-        }, 1000);
+        createDefaultAdmin();
     });
 }
 
@@ -275,7 +265,7 @@ function createDefaultAdmin() {
         );
 
         // Инициализация тестовых данных по колледжам
-        setTimeout(() => initializeColleges(), 500);
+        initializeColleges();
     });
 }
 
