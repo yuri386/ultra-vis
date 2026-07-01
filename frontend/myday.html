@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой день - UltraWise</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/themes.css">
+    <style>
+        .myday-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .myday-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .myday-header h1 {
+            font-size: 2.5rem;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .myday-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card h2 {
+            margin: 0 0 1rem;
+            color: #6366f1;
+            font-size: 1.5rem;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .task-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <script src="/js/auth-manager.js" defer></script>
+
+    <div class="myday-container">
+        <div class="myday-header">
+            <h1>📅 Мой день</h1>
+            <p>Планируйте свой день и отслеживайте прогресс</p>
+        </div>
+
+        <div class="myday-grid">
+            <div class="card">
+                <h2>✓ Задачи на сегодня</h2>
+                <ul class="task-list">
+                    <li class="task-item"><input type="checkbox"> <label>Учить математику</label></li>
+                    <li class="task-item"><input type="checkbox"> <label>Прочитать лекцию</label></li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>📊 Статистика</h2>
+                <p>Задач выполнено: <strong>5/10</strong></p>
+                <p>Часов учёбы: <strong>3.5</strong></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

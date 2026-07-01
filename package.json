@@ -1,0 +1,22 @@
+{
+	"name": "ultrawise-v2",
+	"version": "2.0.0",
+	"description": "UltraWise v2 backend and frontend",
+	"main": "backend/server.js",
+	"scripts": {
+		"start": "node backend/server.js",
+		"seed": "node backend/seeds.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "MIT",
+	"dependencies": {
+		"bcrypt": "^6.0.0",
+		"bcryptjs": "^3.0.3",
+		"cors": "^2.8.6",
+		"express": "^5.2.1",
+		"express-rate-limit": "^8.2.1",
+		"jsonwebtoken": "^9.0.3",
+		"sqlite3": "^5.1.7"
+	}
+}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест авторизации - UltraWise</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+    <!-- Подключаем новый auth-manager -->
+    <script src="/js/auth-manager.js" defer></script>
+
+    <main style="max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
+        <h1>🧪 Тест системы авторизации</h1>
+
+        <div style="margin: 40px 0; padding: 20px; background: var(--bg-light); border-radius: var(--radius); border: 1px solid var(--border);">
+            <h2>Статус авторизации</h2>
+            <pre id="auth-status" style="background: var(--bg); padding: 20px; border-radius: var(--radius); overflow-x: auto;">
+Ожидание загрузки AuthManager...
+            </pre>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 40px 0;">
+            <div style="padding: 20px; background: var(--bg-light); border-radius: var(--radius); border: 1px solid var(--border);">
+                <h3>localStorage данные</h3>
+                <pre id="storage-data" style="background: var(--bg); padding: 20px; border-radius: var(--radius); overflow-x: auto; font-size: 12px;">
+Ожидание загрузки...
+                </pre>
+            </div>
+
+            <div style="padding: 20px; background: var(--bg-light); border-radius: var(--radius); border: 1px solid var(--border);">
+                <h3>Действия</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="updateStatus()" style="padding: 10px; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">
+                        📊 Обновить статус
+                    </button>
+                    <button onclick="showLoginModal()" style="padding: 10px; background: var(--success); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">
+                        🔐 Показать модаль
+                    </button>
+                    <button onclick="clearAllData()" style="padding: 10px; background: var(--danger); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">
+                        🗑️ Очистить данные
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin: 40px 0; padding: 20px; background: var(--bg-light); border-radius: var(--radius); border: 1px solid var(--border);">
+            <h2>💡 Инструкции</h2>
+            <ol style="line-height: 2;">
+                <li><strong>Регистрация:</strong> Нажмите "Показать модаль" → "Регистрация" → заполните форму → отправьте</li>
+                <li><strong>Проверка БД:</strong> Откройте SQLite viewer и проверьте таблицу users</li>
+                <li><strong>Проверка синхронизации:</strong> Откройте этот файл в двух вкладках и войдите на одной</li>
+                <li><strong>Проверка баланса:</strong> Баланс должен обновляться каждые 5 секунд</li>
+            </ol>
+        </div>
+
+        <div id="debug-log" style="margin: 40px 0; padding: 20px; background: var(--bg-light); border-radius: var(--radius); border: 1px solid var(--border);">
+            <h2>📝 Лог событий</h2>
+            <pre id="event-log" style="background: var(--bg); padding: 20px; border-radius: var(--radius); height: 300px; overflow-y: auto; font-size: 11px;"></pre>
+        </div>
+    </main>
+
+    <script>
+        // Логирование
+        const logEl = document.getElementById('event-log');
+        const logs = [];
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            logs.push(`[${time}] ${msg}`);
+            if (logs.length > 50) logs.shift();
+            logEl.textContent = logs.join('\n');
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Обновление статуса
+        function updateStatus() {
+            const status = {
+                auth_loaded: !!window.auth,
+                user: window.auth?.user || null,
+                token: window.auth?.token ? `${window.auth.token.substring(0, 20)}...` : null,
+                isAdmin: window.auth?.isAdmin || false,
+                isLoading: window.auth?.isLoading || false,
+            };
+
+            document.getElementById('auth-status').textContent = JSON.stringify(status, null, 2);
+
+            // localStorage
+            const storage = {
+                token: localStorage.getItem('ultrawise_auth_token') ? '✅ Есть' : '❌ Нет',
+                user: localStorage.getItem('ultrawise_auth_user') ? '✅ Есть' : '❌ Нет',
+            };
+            document.getElementById('storage-data').textContent = JSON.stringify(storage, null, 2);
+
+            addLog('📊 Статус обновлен');
+        }
+
+        // Показать модаль
+        function showLoginModal() {
+            if (window.auth) {
+                window.auth.showAuthModal();
+                addLog('🔐 Модаль авторизации открыта');
+            } else {
+                alert('AuthManager еще не загружен!');
+            }
+        }
+
+        // Очистить данные
+        function clearAllData() {
+            localStorage.clear();
+            location.reload();
+            addLog('🗑️ Данные очищены');
+        }
+
+        // Слушаем события AuthManager
+        window.addEventListener('auth:changed', (e) => {
+            addLog(`✅ Событие auth:changed - пользователь: ${e.detail.user?.nickname || 'гость'}`);
+            updateStatus();
+        });
+
+        window.addEventListener('auth:updated', (e) => {
+            addLog(`🔄 Событие auth:updated - пользователь: ${e.detail.user?.nickname || 'гость'}`);
+            updateStatus();
+        });
+
+        // Инициализация
+        setTimeout(() => {
+            addLog('🚀 Страница загружена');
+            updateStatus();
+
+            if (window.auth) {
+                addLog('✅ AuthManager готов к работе');
+            } else {
+                addLog('⚠️ AuthManager еще не готов');
+                setTimeout(updateStatus, 1000);
+            }
+        }, 500);
+    </script>
+</body>
+</html>

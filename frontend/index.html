@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraWise - Студенческий Портал</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/themes.css">
+</head>
+<body>
+    <!-- Глобальная авторизация и синхронизация -->
+    <script src="/js/auth-manager.js" defer></script>
+    <script src="/js/api.js" defer></script>
+    <script src="/js/components.js" defer></script>
+    <script src="/js/animations.js" defer></script>
+    <script src="/js/theme-switcher.js" defer></script>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="logo">🎓</span>
+                <span class="brand-name">UltraWise</span>
+            </div>
+            
+            <div class="nav-links">
+                <a href="#" class="nav-link active">Главная</a>
+                <a href="lectures.html" class="nav-link">Лекции</a>
+                <a href="tests.html" class="nav-link">Тесты</a>
+                <a href="notes.html" class="nav-link">Заметки</a>
+            </div>
+            
+            <div class="nav-actions">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="balance">💎 <span id="userBalance">0</span></span>
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                </div>
+                <button class="btn-primary" id="loginBtn">Войти</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Герой секция -->
+    <section class="hero">
+        <div class="hero-background"></div>
+        <div class="hero-content">
+            <h1 class="hero-title fade-in">
+                Твой путь к <span class="gradient-text">успеху</span>
+            </h1>
+            <p class="hero-subtitle fade-in delay-1">
+                Обучайся, развивайся и открывай новые возможности вместе с UltraWise
+            </p>
+            <div class="hero-buttons fade-in delay-2">
+                <a href="#features" class="btn-primary btn-large">Начать обучение</a>
+                <a href="#orientation" class="btn-secondary btn-large">Проф-ориентация</a>
+            </div>
+        </div>
+        <div class="hero-decoration">
+            <div class="floating-card card-1">
+                <span class="card-icon">📚</span>
+                <span class="card-text">1000+ лекций</span>
+            </div>
+            <div class="floating-card card-2">
+                <span class="card-icon">🎯</span>
+                <span class="card-text">50+ колледжей</span>
+            </div>
+            <div class="floating-card card-3">
+                <span class="card-icon">⭐</span>
+                <span class="card-text">10k+ студентов</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Быстрые действия -->
+    <section class="quick-actions" id="features">
+        <div class="container">
+            <h2 class="section-title">Что ты хочешь сделать?</h2>
+            
+            <div class="actions-grid">
+                <div class="action-card" onclick="location.href='lectures.html'">
+                    <div class="card-icon-wrapper">
+                        <span class="card-icon-large">📖</span>
+                    </div>
+                    <h3 class="card-title">Лекции</h3>
+                    <p class="card-description">Изучай материалы по всем предметам</p>
+                    <div class="card-shine"></div>
+                </div>
+
+                <div class="action-card" onclick="location.href='tests.html'">
+                    <div class="card-icon-wrapper">
+                        <span class="card-icon-large">✅</span>
+                    </div>
+                    <h3 class="card-title">Тесты</h3>
+                    <p class="card-description">Проверь свои знания</p>
+                    <div class="card-shine"></div>
+                </div>
+
+                <div class="action-card" onclick="location.href='notes.html'">
+                    <div class="card-icon-wrapper">
+                        <span class="card-icon-large">📝</span>
+                    </div>
+                    <h3 class="card-title">Заметки</h3>
+                    <p class="card-description">Веди конспекты онлайн</p>
+                    <div class="card-shine"></div>
+                </div>
+
+                <div class="action-card" onclick="location.href='games.html'">
+                    <div class="card-icon-wrapper">
+                        <span class="card-icon-large">🎮</span>
+                    </div>
+                    <h3 class="card-title">Игры</h3>
+                    <p class="card-description">Учись через развлечения</p>
+                    <div class="card-shine"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Проф-ориентация (большая кнопка) -->
+    <section class="orientation-banner" id="orientation">
+        <div class="container">
+            <div class="banner-content">
+                <div class="banner-text">
+                    <h2 class="banner-title">🎓 Проф-ориентация</h2>
+                    <p class="banner-description">
+                        Выбери свой колледж или ВУЗ! Смотри реальные уроки, фото и отзывы студентов.
+                    </p>
+                </div>
+                <button class="btn-huge" onclick="location.href='orientation.html'">
+                    <span class="btn-text">Выбрать учебное заведение</span>
+                    <span class="btn-arrow">→</span>
+                </button>
+            </div>
+            <div class="banner-decoration">
+                <img src="assets/images/123.png" alt="Студенты" class="decoration-image">
+            </div>
+        </div>
+    </section>
+
+    <!-- Статистика -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number count-up" data-target="1247">0</span>
+                    <span class="stat-label">Лекций</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number count-up" data-target="52">0</span>
+                    <span class="stat-label">Колледжей</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number count-up" data-target="10340">0</span>
+                    <span class="stat-label">Студентов</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number count-up" data-target="98">0</span>
+                    <span class="stat-label">% довольных</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 class="modal-title">Вход в аккаунт</h2>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label>Логин</label>
+                    <input type="text" id="loginUsername" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="loginPassword" required class="form-input">
+                </div>
+                <button type="submit" class="btn-primary btn-block">Войти</button>
+            </form>
+            <p class="auth-switch">Нет аккаунта? <a href="#" id="toRegister">Зарегистрироваться</a></p>
+        </div>
+    </div>
+
+    <div class="modal" id="registerModal">
+        <div class="modal-content modal-large">
+            <span class="modal-close">&times;</span>
+            <h2 class="modal-title">Регистрация</h2>
+            <form id="registerForm" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group"><label>Имя</label><input type="text" id="regFirstName" required class="form-input"></div>
+                    <div class="form-group"><label>Фамилия</label><input type="text" id="regLastName" required class="form-input"></div>
+                </div>
+                <div class="form-group">
+                    <label>Логин</label><input type="text" id="regNickname" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Email</label><input type="email" id="regEmail" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label><input type="password" id="regPassword" required class="form-input">
+                </div>
+                <button type="submit" class="btn-primary btn-block">Создать аккаунт</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const loginBtn = document.getElementById('loginBtn');
+        const loginModal = document.getElementById('loginModal');
+        const regModal = document.getElementById('registerModal');
+        const toReg = document.getElementById('toRegister');
+
+        // 1. ОТКРЫТИЕ МОДАЛОК
+        if (loginBtn) {
+            loginBtn.onclick = () => loginModal.classList.add('active');
+        }
+        if (toReg) {
+            toReg.onclick = (e) => {
+                e.preventDefault();
+                loginModal.classList.remove('active');
+                regModal.classList.add('active');
+            }
+        }
+
+        function updateNavbar() {
+        const token = localStorage.getItem('ultrawise_auth_token');
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userInitials = document.getElementById('userInitials');
+
+        if (token && userInfo && loginBtn) {
+            loginBtn.style.display = 'none';
+            userInfo.style.display = 'flex';
+            // Если сохранял имя в localStorage, можно вытащить первую букву
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            userInitials.textContent = user.firstName ? user.firstName[0] : 'U';
+        }
+    }
+
+updateNavbar(); // Вызываем при загрузке
+        // 2. ЗАКРЫТИЕ (Крестик и фон)
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.onclick = () => btn.closest('.modal').classList.remove('active');
+        });
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal')) e.target.classList.remove('active');
+        };
+
+        // 3. ОБРАБОТКА ВХОДА
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const nickname = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+
+                // Вызываем наш исправленный api.js
+                const result = await window.api.post('/auth/login', { nickname, password });
+                
+                if (result.success) {
+                    localStorage.setItem('ultrawise_auth_token', result.data.token);
+                    alert('Успешный вход!');
+                    location.reload(); 
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+            };
+        }
+
+        // 4. ОБРАБОТКА РЕГИСТРАЦИИ (Улучшенная версия)
+        const regForm = document.getElementById('registerForm');
+        if (regForm) {
+            regForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const userData = {
+                    firstName: document.getElementById('regFirstName').value,
+                    lastName: document.getElementById('regLastName').value,
+                    nickname: document.getElementById('regNickname').value,
+                    email: document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value,
+                    userType: document.getElementById('regUserType').value || 'schoolkid'
+                };
+
+                const result = await window.api.post('/auth/register', userData);
+                
+                if (result.success) {
+                    // ВАЖНО: После регистрации сервер обычно сразу присылает токен
+                    if (result.data.token) {
+                        localStorage.setItem('ultrawise_auth_token', result.data.token);
+                        localStorage.setItem('user', JSON.stringify(result.data.user || result.data));
+                        alert('Регистрация успешна! Входим в аккаунт...');
+                        window.location.href = 'index.html'; // Редирект, чтобы UI обновился
+                    } else {
+                        alert('Регистрация прошла, теперь войдите под своим логином');
+                        regModal.classList.remove('active');
+                        loginModal.classList.add('active');
+                    }
+                } else {
+                    alert('Ошибка регистрации: ' + result.error);
+                }
+            };
+        }
+        const userAvatar = document.getElementById('userAvatar');
+        if (userAvatar) {
+            userAvatar.style.cursor = 'pointer'; // Чтобы было видно, что можно нажать
+            userAvatar.onclick = () => {
+                if (confirm('Выйти из аккаунта?')) {
+                    localStorage.removeItem('ultrawise_auth_token');
+                    localStorage.removeItem('user');
+                    location.reload(); // Страница обновится и кнопка "Войти" вернется
+                }
+            };
+        }
+    });
+
+
+
+    
+    </script>
+</body>

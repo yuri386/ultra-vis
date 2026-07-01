@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="chemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c62828;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b71c1c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#chemGrad)"/>
+  <circle cx="140" cy="100" r="25" fill="none" stroke="white" stroke-width="2"/>
+  <circle cx="200" cy="100" r="25" fill="none" stroke="white" stroke-width="2"/>
+  <circle cx="260" cy="100" r="25" fill="none" stroke="white" stroke-width="2"/>
+  <line x1="165" y1="100" x2="175" y2="100" stroke="white" stroke-width="2"/>
+  <line x1="225" y1="100" x2="235" y2="100" stroke="white" stroke-width="2"/>
+  <text x="140" y="108" font-size="16" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">C</text>
+  <text x="200" y="108" font-size="16" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">H</text>
+  <text x="260" y="108" font-size="16" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">O</text>
+  <text x="200" y="270" font-size="20" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">Органическая химия</text>
+</svg>

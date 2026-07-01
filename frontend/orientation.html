@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Колледжи - UltraWise</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/themes.css">
+</head>
+<body>
+<script src="/js/auth-manager.js" defer></script>
+<script src="/js/api.js" defer></script>
+    <style>
+        .colleges-header {
+            padding: 120px 20px 60px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 16px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-lg);
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 48px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .chip:hover,
+        .chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .colleges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 32px;
+            margin-bottom: 80px;
+        }
+
+        .college-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .college-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg), 0 0 40px rgba(102, 126, 234, 0.2);
+            border-color: var(--primary);
+        }
+
+        .college-image {
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .college-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+        }
+
+        .college-type-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--primary);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            z-index: 1;
+        }
+
+        .college-content {
+            padding: 24px;
+        }
+
+        .college-name {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .college-location {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .college-description {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .college-stats {
+            display: flex;
+            gap: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .stat-icon {
+            font-size: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .skeleton-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .skeleton-image {
+            width: 100%;
+            height: 220px;
+        }
+
+        .skeleton-content {
+            padding: 24px;
+        }
+
+        .skeleton-line {
+            height: 20px;
+            margin-bottom: 12px;
+            border-radius: var(--radius-sm);
+        }
+
+        .skeleton-line.short {
+            width: 60%;
+        }
+    </style>
+</head>
+<!-- index.html, lectures.html, orientation.html и т.д. -->
+<script src="/js/api.js"></script>
+<script src="/js/components.js"></script>
+<script src="/js/animations.js"></script>
+<script src="/js/theme-switcher.js"></script>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit;">
+                    <span class="logo">🎓</span>
+                    <span class="brand-name">UltraWise</span>
+                </a>
+            </div>
+            
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Главная</a>
+                <a href="lectures.html" class="nav-link">Лекции</a>
+                <a href="orientation.html" class="nav-link active">Проф-ориентация</a>
+            </div>
+            
+            <div class="nav-actions">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="balance">💎 <span id="userBalance">0</span></span>
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                </div>
+                <button class="btn-primary" id="loginBtn">Войти</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <section class="colleges-header">
+        <h1 class="hero-title fade-in">
+            Выбери свой <span class="gradient-text">путь</span>
+        </h1>
+        <p class="hero-subtitle fade-in delay-1">
+            Изучи колледжи и ВУЗы, посмотри реальные уроки и отзывы студентов
+        </p>
+    </section>
+
+    <!-- Контент -->
+    <div class="container">
+        <!-- Фильтры -->
+        <div class="filter-bar fade-in delay-2">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Поиск учебного заведения...">
+            </div>
+            
+            <div class="filter-chips">
+                <div class="chip active" data-type="all">Все</div>
+                <div class="chip" data-type="college">Колледжи</div>
+                <div class="chip" data-type="university">ВУЗы</div>
+            </div>
+        </div>
+
+        <!-- Сетка колледжей -->
+        <div class="colleges-grid stagger-animation" id="collegesGrid">
+            <!-- Skeleton loading -->
+            <div class="skeleton-card skeleton">
+                <div class="skeleton-image skeleton"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                </div>
+            </div>
+            <div class="skeleton-card skeleton">
+                <div class="skeleton-image skeleton"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                </div>
+            </div>
+            <div class="skeleton-card skeleton">
+                <div class="skeleton-image skeleton"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo">🎓</span>
+                    <span class="brand-name">UltraWise</span>
+                    <p class="footer-description">Студенческий портал нового поколения</p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 UltraWise. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+   
+    <script src="/js/app.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components.js"></script>
+    <script src="/js/animations.js"></script>
+    <script>
+        let colleges = [];
+        let filteredType = 'all';
+
+        // Загрузка колледжей
+        async function loadColleges() {
+            try {
+                const data = await app.apiRequest('/colleges');
+                colleges = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.colleges || []));
+                renderColleges(colleges);
+            } catch (error) {
+                document.getElementById('collegesGrid').innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-icon">😢</div>
+                        <h3>Ошибка загрузки</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Отрисовка колледжей
+        function renderColleges(items) {
+            const grid = document.getElementById('collegesGrid');
+            
+            if (items.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-icon">🏫</div>
+                        <h3>Ничего не найдено</h3>
+                        <p>Попробуйте изменить фильтры или поиск</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = items.map(college => `
+                <div class="college-card" onclick="openCollege(${college.id})">
+                    <div class="college-image">
+                        🏛️
+                        <span class="college-type-badge">
+                            ${college.type === 'college' ? 'Колледж' : 'ВУЗ'}
+                        </span>
+                    </div>
+                    <div class="college-content">
+                        <h3 class="college-name">${college.name}</h3>
+                        <div class="college-location">
+                            <span>📍</span>
+                            ${college.location || 'Локация не указана'}
+                        </div>
+                        <p class="college-description">
+                            ${college.description || 'Описание отсутствует'}
+                        </p>
+                        <div class="college-stats">
+                            <div class="stat-item">
+                                <span class="stat-icon">👥</span>
+                                <span>500+ студентов</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">⭐</span>
+                                <span>4.8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Открыть страницу колледжа
+        function openCollege(id) {
+            window.location.href = `college-detail.html?id=${id}`;
+        }
+
+        // Фильтры
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                
+                filteredType = chip.dataset.type;
+                filterColleges();
+            });
+        });
+
+        // Поиск
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            filterColleges();
+        });
+
+        function filterColleges() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = colleges;
+            
+            if (filteredType !== 'all') {
+                filtered = filtered.filter(c => c.type === filteredType);
+            }
+            
+            if (search) {
+                filtered = filtered.filter(c => 
+                    c.name.toLowerCase().includes(search) ||
+                    (c.description && c.description.toLowerCase().includes(search)) ||
+                    (c.location && c.location.toLowerCase().includes(search))
+                );
+            }
+            
+            renderColleges(filtered);
+        }
+
+        // Загрузка при старте
+        document.addEventListener('DOMContentLoaded', () => {
+            app.checkAuth();
+            loadColleges();
+        });
+    </script>
+</body>
+</html>

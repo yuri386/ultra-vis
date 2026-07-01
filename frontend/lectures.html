@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лекции - UltraWise</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/themes.css">
+</head>
+<body>
+<script src="/js/auth-manager.js" defer></script>
+    <style>
+        .lectures-header {
+            padding: 120px 20px 60px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        .filter-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 40px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 48px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 16px;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .chip:hover,
+        .chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .lectures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 28px;
+            margin-bottom: 60px;
+        }
+
+        .lecture-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .lecture-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .lecture-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .lecture-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(102, 126, 234, 0.2);
+            border-color: var(--primary);
+        }
+
+        .lecture-thumbnail {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lecture-thumbnail::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .difficulty-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 1;
+        }
+
+        .difficulty-easy { color: #10b981; }
+        .difficulty-medium { color: #f59e0b; }
+        .difficulty-hard { color: #ef4444; }
+
+        .lecture-content {
+            padding: 24px;
+        }
+
+        .lecture-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .lecture-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .lecture-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .lecture-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .view-lecture-btn {
+            padding: 10px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .view-lecture-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit;">
+                    <span class="logo">🎓</span>
+                    <span class="brand-name">UltraWise</span>
+                </a>
+            </div>
+            
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Главная</a>
+                <a href="lectures.html" class="nav-link active">Лекции</a>
+                <a href="tests.html" class="nav-link">Тесты</a>
+                <a href="orientation.html" class="nav-link">Проф-ориентация</a>
+            </div>
+            
+            <div class="nav-actions">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="balance">💎 <span id="userBalance">0</span></span>
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                </div>
+                <button class="btn-primary" id="loginBtn">Войти</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <section class="lectures-header">
+        <h1 class="hero-title fade-in">
+            База <span class="gradient-text">знаний</span>
+        </h1>
+        <p class="hero-subtitle fade-in delay-1">
+            Более 1000 лекций по всем предметам
+        </p>
+    </section>
+
+    <!-- Контент -->
+    <div class="container">
+        <!-- Фильтры -->
+        <div class="filter-panel fade-in delay-2">
+            <div class="filter-row">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск лекций...">
+                </div>
+            </div>
+            
+            <div class="filter-chips">
+                <div class="chip active" data-category="">Все</div>
+                <div class="chip" data-category="Математика">Математика</div>
+                <div class="chip" data-category="Физика">Физика</div>
+                <div class="chip" data-category="Программирование">Программирование</div>
+                <div class="chip" data-category="Английский">Английский</div>
+                <div class="chip" data-category="Химия">Химия</div>
+                <div class="chip" data-category="Биология">Биология</div>
+            </div>
+        </div>
+
+        <!-- Сетка лекций -->
+        <div class="lectures-grid stagger-animation" id="lecturesGrid">
+            <!-- Skeleton loading -->
+            <div class="lecture-card skeleton">
+                <div class="lecture-thumbnail skeleton"></div>
+                <div class="lecture-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                </div>
+            </div>
+            <div class="lecture-card skeleton">
+                <div class="lecture-thumbnail skeleton"></div>
+                <div class="lecture-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                </div>
+            </div>
+            <div class="lecture-card skeleton">
+                <div class="lecture-thumbnail skeleton"></div>
+                <div class="lecture-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line short skeleton"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 UltraWise. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+   <script>
+    let lectures = [];
+    let filteredCategory = '';
+
+    // Используем наш новый API клиент
+    async function loadLectures() {
+        const grid = document.getElementById('lecturesGrid');
+        try {
+            // Вызываем метод из api.js
+            const response = await window.api.get('/lectures');
+            
+            if (response.success) {
+                lectures = response.data;
+                renderLectures(lectures);
+            } else {
+                throw new Error(response.error);
+            }
+        } catch (error) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">😢</div>
+                    <h3>Ошибка соединения с сервером</h3>
+                    <p>Проверьте, запущен ли бэкенд на порту 8000</p>
+                </div>
+            `;
+        }
+    }
+
+    function getDifficultyLabel(level) {
+        const l = parseInt(level);
+        if (l <= 3) return { text: 'Легко', class: 'difficulty-easy' };
+        if (l <= 7) return { text: 'Средне', class: 'difficulty-medium' };
+        return { text: 'Сложно', class: 'difficulty-hard' };
+    }
+
+    function getCategoryIcon(category) {
+        const icons = {
+            'Математика': '📐', 'Физика': '⚡', 'Программирование': '💻',
+            'Английский': '🇬🇧', 'Химия': '🧪', 'Биология': '🔬'
+        };
+        return icons[category] || '📚';
+    }
+
+    function renderLectures(items) {
+        const grid = document.getElementById('lecturesGrid');
+        if (!items || items.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>Лекций пока нет</h3></div>';
+            return;
+        }
+
+        grid.innerHTML = items.map(lecture => {
+            const diff = getDifficultyLabel(lecture.difficulty || 1);
+            return `
+                <div class="lecture-card" onclick="location.href='lecture-detail.html?id=${lecture.id}'">
+                    <div class="lecture-thumbnail">${getCategoryIcon(lecture.category)}
+                        <span class="difficulty-badge ${diff.class}">${diff.text}</span>
+                    </div>
+                    <div class="lecture-content">
+                        <span class="lecture-category">${lecture.category}</span>
+                        <h3 class="lecture-title">${lecture.title}</h3>
+                        <p class="lecture-description">${lecture.description || ''}</p>
+                        <div class="lecture-meta">
+                            <span>👁️ ${lecture.views || 0}</span>
+                            <button class="view-lecture-btn">Открыть</button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // Фильтрация (локальная для быстроты)
+    function filterLectures() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        let filtered = lectures.filter(l => {
+            const matchesCat = !filteredCategory || l.category === filteredCategory;
+            const matchesSearch = !search || l.title.toLowerCase().includes(search) || (l.description && l.description.toLowerCase().includes(search));
+            return matchesCat && matchesSearch;
+        });
+        renderLectures(filtered);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadLectures(); // Загружаем данные
+
+        // Слушатель поиска
+        document.getElementById('searchInput').addEventListener('input', filterLectures);
+
+        // Слушатель чипсов (категорий)
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                filteredCategory = this.dataset.category;
+                filterLectures();
+            });
+        });
+    });
+</script>
+    <!-- Модальное окно входа -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('loginModal').classList.remove('active')">&times;</span>
+            <h2 class="modal-title">Вход в аккаунт</h2>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label>Логин</label>
+                    <input type="text" id="loginUsername" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="loginPassword" required class="form-input">
+                </div>
+                
+                <button type="submit" class="btn-primary btn-block">Войти</button>
+            </form>
+            
+            <p class="auth-switch">
+                Нет аккаунта? <a href="#" onclick="document.getElementById('loginModal').classList.remove('active'); document.getElementById('registerModal').classList.add('active');">Зарегистрироваться</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Модальное окно регистрации -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="document.getElementById('registerModal').classList.remove('active')">&times;</span>
+            <h2 class="modal-title">Регистрация</h2>
+            
+            <form id="registerForm" class="auth-form">
+                <!-- Личные данные -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Имя *</label>
+                        <input type="text" id="regFirstName" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Фамилия *</label>
+                        <input type="text" id="regLastName" required class="form-input">
+                    </div>
+                </div>
+
+                <!-- Тип пользователя -->
+                <div class="form-group">
+                    <label>Кто ты? *</label>
+                    <select id="regUserType" required class="form-input">
+                        <option value="">Выбери тип</option>
+                        <option value="schoolkid">Школьник</option>
+                        <option value="college_student">Студент колледжа</option>
+                        <option value="university_student">Студент ВУЗа</option>
+                        <option value="employee">Работодатель</option>
+                    </select>
+                </div>
+
+                <!-- Возраст и курс/класс -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Возраст</label>
+                        <input type="number" id="regAge" min="5" max="100" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Класс/Курс</label>
+                        <input type="text" id="regGrade" placeholder="например: 11 класс" class="form-input">
+                    </div>
+                </div>
+
+                <!-- Учётные данные -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Логин *</label>
+                        <input type="text" id="regNickname" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="regEmail" required class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Пароль *</label>
+                        <input type="password" id="regPassword" required class="form-input">
+                        <small>Минимум 6 символов</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Подтверди пароль *</label>
+                        <input type="password" id="regPasswordConfirm" required class="form-input">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary btn-block">Зарегистрироваться</button>
+            </form>
+            
+            <p class="auth-switch">
+                Уже есть аккаунт? <a href="#" onclick="document.getElementById('registerModal').classList.remove('active'); document.getElementById('loginModal').classList.add('active');">Войти</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+</body>
+</html>

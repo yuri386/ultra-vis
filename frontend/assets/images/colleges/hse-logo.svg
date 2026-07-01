@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#165caa"/>
+  <rect x="30" y="50" width="140" height="100" fill="none" stroke="white" stroke-width="3" rx="10"/>
+  <line x1="60" y1="50" x2="60" y2="150" stroke="white" stroke-width="2"/>
+  <line x1="100" y1="50" x2="100" y2="150" stroke="white" stroke-width="2"/>
+  <line x1="140" y1="50" x2="140" y2="150" stroke="white" stroke-width="2"/>
+  <text x="100" y="185" font-size="14" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">ВШЭ</text>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="pythonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1565c0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#pythonGrad)"/>
+  <circle cx="150" cy="100" r="35" fill="#ffeb3b"/>
+  <circle cx="250" cy="100" r="35" fill="#3776ab"/>
+  <text x="150" y="110" font-size="24" font-weight="bold" fill="#3776ab" text-anchor="middle" font-family="Arial">Py</text>
+  <text x="250" y="110" font-size="24" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">&lt;/&gt;</text>
+  <rect x="80" y="180" width="240" height="80" fill="white" opacity="0.1" rx="5"/>
+  <text x="200" y="210" font-size="16" fill="white" text-anchor="middle" font-family="monospace">print("Hello")</text>
+  <text x="200" y="270" font-size="20" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">Python для начинающих</text>
+</svg>

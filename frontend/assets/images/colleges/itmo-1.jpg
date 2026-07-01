@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="grad9" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#004b87;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#003366;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#grad9)"/>
+  <polygon points="400,80 500,200 450,200 500,320 300,320 350,200 300,200" fill="#ff6600" opacity="0.8"/>
+  <circle cx="400" cy="150" r="40" fill="white" opacity="0.6"/>
+  <text x="400" y="380" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">ИТМО</text>
+</svg>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraWise - Добавить колледж</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/animations.css">
+</head>
+<!-- index.html, lectures.html, orientation.html и т.д. -->
+<script src="/js/api.js"></script>
+<script src="/js/components.js"></script>
+<script src="/js/animations.js"></script>
+<script src="/js/theme-switcher.js"></script>
+<body>
+    <div class="admin-layout">
+        <!-- Боковая панель админа -->
+        <aside class="admin-sidebar">
+            <div class="admin-brand">
+                <h2>UltraWise Admin</h2>
+            </div>
+            <nav class="admin-nav">
+                <a href="dashboard.html" class="admin-nav-item">
+                    <span class="icon">📊</span>
+                    <span>Панель управления</span>
+                </a>
+                <a href="add-lecture.html" class="admin-nav-item">
+                    <span class="icon">📚</span>
+                    <span>Добавить лекцию</span>
+                </a>
+                <a href="add-college.html" class="admin-nav-item active">
+                    <span class="icon">🎓</span>
+                    <span>Добавить колледж</span>
+                </a>
+                <a href="../lectures.html" class="admin-nav-item">
+                    <span class="icon">📖</span>
+                    <span>Просмотр лекций</span>
+                </a>
+                <a href="../orientation.html" class="admin-nav-item">
+                    <span class="icon">🧭</span>
+                    <span>Просмотр колледжей</span>
+                </a>
+                <div class="admin-nav-divider"></div>
+                <a href="../index.html" class="admin-nav-item">
+                    <span class="icon">🏠</span>
+                    <span>На главную</span>
+                </a>
+                <a href="#" class="admin-nav-item" id="logoutBtn">
+                    <span class="icon">🚪</span>
+                    <span>Выйти</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Основной контент -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>Добавить новый колледж</h1>
+                <div class="admin-breadcrumb">
+                    <a href="dashboard.html">Панель управления</a>
+                    <span>/</span>
+                    <span>Добавить колледж</span>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <!-- Форма добавления колледжа -->
+                <form id="addCollegeForm" class="admin-form">
+                    <!-- Основная информация -->
+                    <div class="form-section">
+                        <h2>Основная информация</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeName">Название учебного заведения *</label>
+                            <input type="text" id="collegeName" name="name" required 
+                                   placeholder="Например: Московский политехнический университет">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeType">Тип учебного заведения *</label>
+                                <select id="collegeType" name="type" required>
+                                    <option value="">Выберите тип</option>
+                                    <option value="college">Колледж</option>
+                                    <option value="university">Университет</option>
+                                    <option value="institute">Институт</option>
+                                    <option value="academy">Академия</option>
+                                    <option value="technical">Техникум</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegeCity">Город *</label>
+                                <input type="text" id="collegeCity" name="city" required 
+                                       placeholder="Москва">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeAddress">Полный адрес</label>
+                            <input type="text" id="collegeAddress" name="address" 
+                                   placeholder="ул. Примерная, д. 1">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeWebsite">Веб-сайт</label>
+                                <input type="url" id="collegeWebsite" name="website" 
+                                       placeholder="https://example.edu">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegePhone">Телефон</label>
+                                <input type="tel" id="collegePhone" name="phone" 
+                                       placeholder="+7 (495) 123-45-67">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeEmail">Email</label>
+                            <input type="email" id="collegeEmail" name="email" 
+                                   placeholder="info@college.edu">
+                        </div>
+                    </div>
+
+                    <!-- Описание -->
+                    <div class="form-section">
+                        <h2>Описание</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeDescription">Краткое описание *</label>
+                            <textarea id="collegeDescription" name="description" 
+                                      rows="3" required
+                                      placeholder="Краткое описание учебного заведения"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeFullDescription">Полное описание *</label>
+                            <textarea id="collegeFullDescription" name="fullDescription" 
+                                      rows="8" required
+                                      placeholder="Подробная информация о колледже, его истории, миссии и т.д."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeAdvantages">Преимущества</label>
+                            <textarea id="collegeAdvantages" name="advantages" 
+                                      rows="4"
+                                      placeholder="Перечислите основные преимущества (каждое с новой строки)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Специальности -->
+                    <div class="form-section">
+                        <h2>Специальности и направления</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeSpecialties">Специальности *</label>
+                            <textarea id="collegeSpecialties" name="specialties" 
+                                      rows="6" required
+                                      placeholder="Перечислите специальности (каждая с новой строки)
+Например:
+- Программная инженерия
+- Информационные системы
+- Кибербезопасность"></textarea>
+                            <small>Введите каждую специальность с новой строки</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeDepartments">Факультеты/Отделения</label>
+                            <textarea id="collegeDepartments" name="departments" 
+                                      rows="4"
+                                      placeholder="Перечислите факультеты (каждый с новой строки)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Условия поступления -->
+                    <div class="form-section">
+                        <h2>Условия поступления</h2>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeMinScore">Минимальный проходной балл</label>
+                                <input type="number" id="collegeMinScore" name="minScore" 
+                                       min="0" max="300" placeholder="180">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegeTuitionFee">Стоимость обучения (год)</label>
+                                <input type="number" id="collegeTuitionFee" name="tuitionFee" 
+                                       min="0" placeholder="150000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeAdmissionRequirements">Требования для поступления</label>
+                            <textarea id="collegeAdmissionRequirements" name="admissionRequirements" 
+                                      rows="5"
+                                      placeholder="ЕГЭ по математике, русскому языку, физике/информатике"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeStudyDuration">Срок обучения (лет)</label>
+                                <input type="number" id="collegeStudyDuration" name="studyDuration" 
+                                       min="1" max="10" step="0.5" placeholder="4">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegeStudyForm">Форма обучения</label>
+                                <select id="collegeStudyForm" name="studyForm" multiple>
+                                    <option value="full-time">Очная</option>
+                                    <option value="part-time">Очно-заочная</option>
+                                    <option value="correspondence">Заочная</option>
+                                    <option value="online">Дистанционная</option>
+                                </select>
+                                <small>Удерживайте Ctrl для выбора нескольких</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Медиа -->
+                    <div class="form-section">
+                        <h2>Медиа материалы</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeLogo">Логотип колледжа</label>
+                            <div class="file-upload">
+                                <input type="file" id="collegeLogo" name="logo" 
+                                       accept="image/*">
+                                <div class="file-upload-preview" id="logoPreview">
+                                    <span class="placeholder">Выберите логотип</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeImages">Фотографии колледжа</label>
+                            <input type="file" id="collegeImages" name="images" 
+                                   accept="image/*" multiple>
+                            <small>Можно выбрать несколько фотографий</small>
+                            <div class="images-preview" id="imagesPreview"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeVideo">Видео-презентация (URL)</label>
+                            <input type="url" id="collegeVideo" name="videoUrl" 
+                                   placeholder="https://youtube.com/watch?v=...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeBrochure">Буклет/Брошюра (PDF)</label>
+                            <input type="file" id="collegeBrochure" name="brochure" 
+                                   accept=".pdf">
+                        </div>
+                    </div>
+
+                    <!-- Рейтинг и статистика -->
+                    <div class="form-section">
+                        <h2>Рейтинг и статистика</h2>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeRating">Рейтинг (1-5)</label>
+                                <input type="number" id="collegeRating" name="rating" 
+                                       min="1" max="5" step="0.1" placeholder="4.5">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegeStudentsCount">Количество студентов</label>
+                                <input type="number" id="collegeStudentsCount" name="studentsCount" 
+                                       min="0" placeholder="5000">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="collegeFoundedYear">Год основания</label>
+                                <input type="number" id="collegeFoundedYear" name="foundedYear" 
+                                       min="1800" max="2025" placeholder="1995">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="collegeAccreditation">Аккредитация</label>
+                                <input type="text" id="collegeAccreditation" name="accreditation" 
+                                       placeholder="Государственная аккредитация">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Контакты и социальные сети -->
+                    <div class="form-section">
+                        <h2>Социальные сети</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeVK">ВКонтакте</label>
+                            <input type="url" id="collegeVK" name="vk" 
+                                   placeholder="https://vk.com/college">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeTelegram">Telegram</label>
+                            <input type="text" id="collegeTelegram" name="telegram" 
+                                   placeholder="@college_channel">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeInstagram">Instagram</label>
+                            <input type="text" id="collegeInstagram" name="instagram" 
+                                   placeholder="@college_official">
+                        </div>
+                    </div>
+
+                    <!-- Теги и категории -->
+                    <div class="form-section">
+                        <h2>Категории и теги</h2>
+                        
+                        <div class="form-group">
+                            <label for="collegeCategories">Категории</label>
+                            <select id="collegeCategories" name="categories" multiple>
+                                <option value="it">IT и программирование</option>
+                                <option value="engineering">Инженерия</option>
+                                <option value="economics">Экономика</option>
+                                <option value="medicine">Медицина</option>
+                                <option value="arts">Искусство</option>
+                                <option value="law">Право</option>
+                                <option value="education">Педагогика</option>
+                                <option value="science">Естественные науки</option>
+                            </select>
+                            <small>Удерживайте Ctrl для выбора нескольких</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="collegeTags">Теги</label>
+                            <input type="text" id="collegeTags" name="tags" 
+                                   placeholder="программирование, бюджет, общежитие (через запятую)">
+                        </div>
+                    </div>
+
+                    <!-- Настройки публикации -->
+                    <div class="form-section">
+                        <h2>Настройки публикации</h2>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="collegePublished" name="published" checked>
+                                <span>Опубликовать сразу</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="collegeFeatured" name="featured">
+                                <span>Рекомендуемый колледж</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="collegeHasDormitory" name="hasDormitory">
+                                <span>Есть общежитие</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="collegeHasBudget" name="hasBudget">
+                                <span>Есть бюджетные места</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки действий -->
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="previewBtn">
+                            👁️ Предпросмотр
+                        </button>
+                        <button type="button" class="btn-secondary" id="saveDraftBtn">
+                            💾 Сохранить как черновик
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            ✅ Опубликовать колледж
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно предпросмотра -->
+    <div class="modal" id="previewModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Предпросмотр колледжа</h2>
+                <button class="close-btn" id="closePreview">×</button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Предпросмотр будет здесь -->
+            </div>
+        </div>
+    </div>
+
+    <!-- В конце КАЖДОГО HTML файла перед </body> -->
+    <script src="/js/app.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components.js"></script>
+    <script src="/js/animations.js"></script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('addCollegeForm');
+            
+            // Обработчик формы
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const collegeData = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch('/api/admin/colleges', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        },
+                        body: JSON.stringify(collegeData)
+                    });
+                    
+                    if (response.ok) {
+                        alert('Колледж успешно добавлен!');
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        alert('Ошибка при добавлении колледжа');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка');
+                }
+            });
+
+            // Предпросмотр логотипа
+            document.getElementById('collegeLogo').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('logoPreview').innerHTML = 
+                            `<img src="${e.target.result}" alt="Logo">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Предпросмотр фотографий
+            document.getElementById('collegeImages').addEventListener('change', function(e) {
+                const preview = document.getElementById('imagesPreview');
+                preview.innerHTML = '';
+                
+                Array.from(e.target.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.width = '150px';
+                        img.style.margin = '5px';
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            // Предпросмотр
+            document.getElementById('previewBtn').addEventListener('click', function() {
+                const name = document.getElementById('collegeName').value;
+                const description = document.getElementById('collegeDescription').value;
+                const city = document.getElementById('collegeCity').value;
+                
+                const previewHTML = `
+                    <div class="college-preview">
+                        <h1>${name || 'Название колледжа'}</h1>
+                        <p class="city">📍 ${city || 'Город не указан'}</p>
+                        <p class="description">${description || 'Описание не добавлено'}</p>
+                    </div>
+                `;
+                
+                document.getElementById('previewContent').innerHTML = previewHTML;
+                document.getElementById('previewModal').classList.add('active');
+            });
+
+            document.getElementById('closePreview').addEventListener('click', function() {
+                document.getElementById('previewModal').classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>

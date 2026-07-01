@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детали колледжа - UltraWise</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/global.css">
+</head>
+<body>
+    <script src="/js/auth-manager.js" defer></script>
+    <script src="/js/api.js"></script>
+    <style>
+        .detail-hero {
+            min-height: 400px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            padding: 120px 20px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .detail-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(102, 126, 234, 0.1), transparent);
+        }
+
+        .hero-content-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .college-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .college-logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .college-info h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .college-meta {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+
+        .college-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .detail-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 16px 32px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .description-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .description-section h2 {
+            font-size: 32px;
+            margin-bottom: 24px;
+        }
+
+        .description-text {
+            font-size: 18px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .specialties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .specialty-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: var(--transition);
+        }
+
+        .specialty-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .specialty-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .specialty-duration {
+            color: var(--primary);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .specialty-description {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .media-item {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: relative;
+            padding-bottom: 66.67%;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .media-item:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .media-item img,
+        .media-item video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .reviews-section {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .review-stats {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .average-rating {
+            text-align: center;
+        }
+
+        .rating-number {
+            font-size: 64px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stars {
+            font-size: 32px;
+            color: #fbbf24;
+        }
+
+        .rating-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rating-bar {
+            display: grid;
+            grid-template-columns: 60px 1fr 60px;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 1s ease-out;
+        }
+
+        .review-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .reviewer-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .reviewer-name {
+            font-weight: 600;
+        }
+
+        .review-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .review-rating {
+            color: #fbbf24;
+            font-size: 18px;
+        }
+
+        .review-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .add-review-form {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        .form-title {
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+
+        .rating-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            font-size: 32px;
+            cursor: pointer;
+            color: rgba(251, 191, 36, 0.3);
+            transition: var(--transition);
+        }
+
+        .star-btn:hover,
+        .star-btn.active {
+            color: #fbbf24;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit;">
+                    <span class="logo">🎓</span>
+                    <span class="brand-name">UltraWise</span>
+                </a>
+            </div>
+            
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Главная</a>
+                <a href="lectures.html" class="nav-link">Лекции</a>
+                <a href="orientation.html" class="nav-link active">Проф-ориентация</a>
+            </div>
+            
+            <div class="nav-actions">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="balance">💎 <span id="userBalance">0</span></span>
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                </div>
+                <button class="btn-primary" id="loginBtn">Войти</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Герой секция -->
+    <section class="detail-hero">
+        <div class="hero-content-wrapper">
+            <div class="breadcrumb">
+                <a href="index.html">Главная</a>
+                <span>/</span>
+                <a href="orientation.html">Проф-ориентация</a>
+                <span>/</span>
+                <span id="collegeName">Загрузка...</span>
+            </div>
+
+            <div class="college-header">
+                <div class="college-logo">🏛️</div>
+                
+                <div class="college-info">
+                    <h1 id="collegeTitle">Загрузка...</h1>
+                    <div class="college-meta">
+                        <div class="meta-item">
+                            <span>📍</span>
+                            <span id="collegeLocation">—</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>🎓</span>
+                            <span id="collegeType">—</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>⭐</span>
+                            <span id="collegeRating">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="college-actions">
+                    <a href="#" id="collegeWebsite" target="_blank" class="btn-primary" style="display: none;">
+                        🌐 Сайт
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Контент -->
+    <div class="detail-content">
+        <!-- Табы -->
+        <div class="tabs">
+            <button class="tab active" data-tab="about">О заведении</button>
+            <button class="tab" data-tab="specialties">Специальности</button>
+            <button class="tab" data-tab="media">Фото и видео</button>
+            <button class="tab" data-tab="reviews">Отзывы</button>
+        </div>
+
+        <!-- Описание -->
+        <div class="tab-content active" id="about">
+            <div class="description-section">
+                <h2>О заведении</h2>
+                <p class="description-text" id="collegeDescription">
+                    Загрузка описания...
+                </p>
+            </div>
+        </div>
+
+        <!-- Специальности -->
+        <div class="tab-content" id="specialties">
+            <div class="specialties-grid" id="specialtiesGrid">
+                <!-- Будет заполнено JS -->
+            </div>
+        </div>
+
+        <!-- Медиа -->
+        <div class="tab-content" id="media">
+            <div class="media-gallery" id="mediaGallery">
+                <!-- Будет заполнено JS -->
+            </div>
+        </div>
+
+        <!-- Отзывы -->
+        <div class="tab-content" id="reviews">
+            <div class="reviews-section">
+                <!-- Статистика -->
+                <div class="review-stats" id="reviewStats" style="display: none;">
+                    <div class="average-rating">
+                        <div class="rating-number" id="avgRating">0</div>
+                        <div class="stars">★★★★★</div>
+                        <div style="color: var(--text-secondary); margin-top: 8px;">
+                            <span id="reviewCount">0</span> отзывов
+                        </div>
+                    </div>
+                    <div class="rating-bars" id="ratingBars">
+                        <!-- Будет заполнено JS -->
+                    </div>
+                </div>
+
+                <!-- Форма добавления -->
+                <div class="add-review-form" id="addReviewForm" style="display: none;">
+                    <h3 class="form-title">Оставить отзыв</h3>
+                    <form id="reviewForm">
+                        <div class="rating-input">
+                            <button type="button" class="star-btn" data-rating="1">★</button>
+                            <button type="button" class="star-btn" data-rating="2">★</button>
+                            <button type="button" class="star-btn" data-rating="3">★</button>
+                            <button type="button" class="star-btn" data-rating="4">★</button>
+                            <button type="button" class="star-btn" data-rating="5">★</button>
+                        </div>
+                        <div class="form-field">
+                            <textarea class="form-textarea" id="reviewText" placeholder="Расскажите о своём опыте..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 16px;">
+                            ✍️ Опубликовать отзыв
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Список отзывов -->
+                <div id="reviewsList">
+                    <!-- Будет заполнено JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 UltraWise. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script>
+        const collegeId = new URLSearchParams(window.location.search).get('id');
+        let selectedRating = 0;
+
+        // Загрузка данных колледжа
+        async function loadCollege() {
+            if (!collegeId) {
+                window.location.href = 'orientation.html';
+                return;
+            }
+
+            try {
+                const college = await app.apiRequest(`/colleges/${collegeId}`);
+                
+                // Заполняем данные
+                document.getElementById('collegeName').textContent = college.name;
+                document.getElementById('collegeTitle').textContent = college.name;
+                document.getElementById('collegeLocation').textContent = college.location || 'Не указано';
+                document.getElementById('collegeType').textContent = college.type === 'college' ? 'Колледж' : 'ВУЗ';
+                document.getElementById('collegeDescription').textContent = college.description || 'Описание отсутствует';
+                
+                if (college.website) {
+                    const websiteLink = document.getElementById('collegeWebsite');
+                    websiteLink.href = college.website;
+                    websiteLink.style.display = 'inline-flex';
+                }
+
+                // Специальности
+                renderSpecialties(college.specialties || []);
+                
+                // Медиа
+                renderMedia(college.media || []);
+                
+                // Отзывы
+                renderReviews(college.reviews || []);
+                
+                // Показываем форму если авторизован
+                if (app.getUser()) {
+                    document.getElementById('addReviewForm').style.display = 'block';
+                }
+
+            } catch (error) {
+                app.showNotification('Ошибка загрузки данных', 'error');
+                console.error(error);
+            }
+        }
+
+        // Специальности
+        function renderSpecialties(specialties) {
+            const grid = document.getElementById('specialtiesGrid');
+            
+            if (specialties.length === 0) {
+                grid.innerHTML = '<div class="empty-state">Специальности пока не добавлены</div>';
+                return;
+            }
+
+            grid.innerHTML = specialties.map(spec => `
+                <div class="specialty-card">
+                    <div class="specialty-name">${spec.name}</div>
+                    <div class="specialty-duration">⏱️ ${spec.duration || 'Длительность не указана'}</div>
+                    <div class="specialty-description">${spec.description || ''}</div>
+                </div>
+            `).join('');
+        }
+
+        // Медиа
+        function renderMedia(media) {
+            const gallery = document.getElementById('mediaGallery');
+            
+            if (media.length === 0) {
+                gallery.innerHTML = '<div class="empty-state">Фото и видео пока не добавлены</div>';
+                return;
+            }
+
+            gallery.innerHTML = media.map(item => `
+                <div class="media-item">
+                    ${item.type === 'photo' 
+                        ? `<img src="${item.url}" alt="${item.description || ''}">`
+                        : `<video src="${item.url}" controls></video>`
+                    }
+                </div>
+            `).join('');
+        }
+
+        // Отзывы
+        function renderReviews(reviews) {
+            const list = document.getElementById('reviewsList');
+            
+            if (reviews.length === 0) {
+                list.innerHTML = '<div class="empty-state">Отзывов пока нет. Будьте первым!</div>';
+                return;
+            }
+
+            // Статистика
+            const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+            document.getElementById('avgRating').textContent = avgRating;
+            document.getElementById('reviewCount').textContent = reviews.length;
+            document.getElementById('reviewStats').style.display = 'grid';
+
+            // Распределение рейтингов
+            const distribution = [5,4,3,2,1].map(rating => {
+                const count = reviews.filter(r => r.rating === rating).length;
+                const percent = (count / reviews.length * 100).toFixed(0);
+                return { rating, count, percent };
+            });
+
+            document.getElementById('ratingBars').innerHTML = distribution.map(d => `
+                <div class="rating-bar">
+                    <span>${d.rating} ★</span>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: ${d.percent}%"></div>
+                    </div>
+                    <span>${d.count}</span>
+                </div>
+            `).join('');
+
+            // Список отзывов
+            list.innerHTML = reviews.map(review => `
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="reviewer-info">
+                            <div class="reviewer-avatar">
+                                ${review.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="reviewer-name">${review.username}</div>
+                                <div class="review-date">${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
+                            </div>
+                        </div>
+                        <div class="review-rating">${'★'.repeat(review.rating)}</div>
+                    </div>
+                    <div class="review-text">${review.text}</div>
+                </div>
+            `).join('');
+        }
+
+        // Табы
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Рейтинг
+        document.querySelectorAll('.star-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedRating = parseInt(btn.dataset.rating);
+                document.querySelectorAll('.star-btn').forEach((b, i) => {
+                    b.classList.toggle('active', i < selectedRating);
+                });
+            });
+        });
+
+        // Отправка отзыва
+        document.getElementById('reviewForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedRating) {
+                app.showNotification('Поставьте оценку', 'error');
+                return;
+            }
+
+            const text = document.getElementById('reviewText').value.trim();
+            
+            try {
+                await app.apiRequest('/reviews', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        college_id: collegeId,
+                        rating: selectedRating,
+                        text
+                    })
+                });
+
+                app.showNotification('Отзыв добавлен!', 'success');
+                document.getElementById('reviewForm').reset();
+                selectedRating = 0;
+                document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+                
+                // Перезагружаем отзывы
+                setTimeout(() => loadCollege(), 1000);
+                
+            } catch (error) {
+                app.showNotification(error.message, 'error');
+            }
+        });
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            app.checkAuth();
+            loadCollege();
+        });
+    </script>
+</body>
+</html>

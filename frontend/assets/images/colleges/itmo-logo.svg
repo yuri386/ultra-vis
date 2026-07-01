@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#004b87"/>
+  <polygon points="100,30 150,70 150,130 100,170 50,130 50,70" fill="#ff6600"/>
+  <circle cx="100" cy="100" r="20" fill="white"/>
+  <text x="100" y="185" font-size="12" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">ИТМО</text>
+</svg>

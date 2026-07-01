@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraWise - Цитатник</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/themes.css">
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+    <!-- Глобальная авторизация и баланс синхронизация -->
+    <script src="/js/auth-manager.js" defer></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components.js"></script>
+    <script src="/js/animations.js"></script>
+    <script src="/js/theme-switcher.js"></script>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Заголовок страницы -->
+            <div class="page-header">
+                <h1>💭 Цитатник</h1>
+                <p class="subtitle">Вдохновение каждый день</p>
+            </div>
+
+            <!-- Цитата дня -->
+            <section class="quote-of-day">
+                <div class="quote-card featured">
+                    <div class="quote-icon">💭</div>
+                    <blockquote id="dailyQuote">
+                        <p class="quote-text">Загрузка цитаты...</p>
+                        <footer class="quote-author">— Автор</footer>
+                    </blockquote>
+                    <div class="quote-actions">
+                        <button class="btn-icon">📤 Поделиться</button>
+                        <button class="btn-icon">📋 Копировать</button>
+                        <button class="btn-icon">❤️ Нравится</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Фильтры -->
+            <section class="filters-section">
+                <div class="filter-group">
+                    <h3>Категории</h3>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-category="all">Все</button>
+                        <button class="filter-btn" data-category="motivation">Мотивация</button>
+                        <button class="filter-btn" data-category="wisdom">Мудрость</button>
+                        <button class="filter-btn" data-category="success">Успех</button>
+                        <button class="filter-btn" data-category="life">Жизнь</button>
+                        <button class="filter-btn" data-category="study">Учёба</button>
+                    </div>
+                </div>
+                <div class="search-group">
+                    <input type="text" id="quotesSearch" class="search-input" placeholder="🔍 Поиск цитат...">
+                </div>
+            </section>
+
+            <!-- Таблица цитат -->
+            <section class="quotes-section">
+                <div class="section-header">
+                    <h2>Популярные цитаты</h2>
+                    <select id="sortQuotes" class="sort-select">
+                        <option value="recent">По дате</option>
+                        <option value="popular">По популярности</option>
+                        <option value="likes">По лайкам</option>
+                    </select>
+                </div>
+
+                <div class="quotes-grid" id="quotesGrid">
+                    <div class="loading-spinner">Загрузка цитат...</div>
+                </div>
+            </section>
+
+            <!-- Статистика -->
+            <section class="stats-section">
+                <h2>Статистика</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Всего цитат</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Мои цитаты</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Понравилось</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <style>
+        .main-content {
+            padding: calc(var(--global-header-height, 80px) + 2rem) 0 2rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary, #cbd5e1);
+            font-size: 1.1rem;
+        }
+
+        .quote-of-day {
+            margin-bottom: 3rem;
+        }
+
+        .quote-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .quote-card.featured {
+            border-color: #6366f1;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .quote-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .quote-card blockquote {
+            margin: 1.5rem 0;
+        }
+
+        .quote-text {
+            font-size: 1.3rem;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .quote-author {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+
+        .quote-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #f1f5f9;
+        }
+
+        .btn-icon:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+            transform: scale(1.05);
+        }
+
+        .filters-section {
+            margin-bottom: 2rem;
+        }
+
+        .filter-group h3 {
+            margin-bottom: 1rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #f1f5f9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: white;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #f1f5f9;
+        }
+
+        .search-input::placeholder {
+            color: #cbd5e1;
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #6366f1;
+            outline: none;
+        }
+
+        .quotes-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .sort-select {
+            padding: 0.5rem 0.75rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #f1f5f9;
+            cursor: pointer;
+        }
+
+        .quotes-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            color: #cbd5e1;
+        }
+
+        .stats-section {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .stats-section h2 {
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .sort-select {
+                width: 100%;
+            }
+        }
+    </style>
+</body>
+</html>

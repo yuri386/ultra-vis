@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraWise - Отдых</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+    <!-- Глобальная авторизация и баланс синхронизация -->
+    <script src="/js/auth-manager.js" defer></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components.js"></script>
+    <script src="/js/animations.js"></script>
+    <script src="/js/theme-switcher.js"></script>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Заголовок страницы -->
+            <div class="page-header">
+                <h1>🎮 Центр отдыха</h1>
+                <p class="subtitle">Расслабься и развивай мозг</p>
+            </div>
+
+            <!-- Вкладки -->
+            <section class="tabs-section">
+                <div class="tabs-nav">
+                    <button class="tab-button active" data-tab="games">🎮 Игры</button>
+                    <button class="tab-button" data-tab="puzzles">🧩 Головоломки</button>
+                    <button class="tab-button" data-tab="brain">🧠 Развитие мозга</button>
+                    <button class="tab-button" data-tab="relax">🧘 Релаксация</button>
+                    <button class="tab-button" data-tab="music">🎵 Музыка</button>
+                </div>
+
+                <!-- Табы контента -->
+                <div class="tabs-content">
+                    <!-- Игры -->
+                    <div class="tab-pane active" id="gamesTab">
+                        <h2>Мини-игры</h2>
+                        <div class="games-grid">
+                            <div class="game-card" data-game="2048">
+                                <div class="game-icon">🔢</div>
+                                <h3>2048</h3>
+                                <p>Логическая игра с числами</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                            <div class="game-card" data-game="snake">
+                                <div class="game-icon">🐍</div>
+                                <h3>Змейка</h3>
+                                <p>Классическая ретро-игра</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                            <div class="game-card" data-game="tetris">
+                                <div class="game-icon">🧱</div>
+                                <h3>Тетрис</h3>
+                                <p>Собирай линии фигур</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                            <div class="game-card" data-game="chess">
+                                <div class="game-icon">♟️</div>
+                                <h3>Шахматы</h3>
+                                <p>Игра против AI</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Головоломки -->
+                    <div class="tab-pane" id="puzzlesTab">
+                        <h2>Головоломки</h2>
+                        <div class="games-grid">
+                            <div class="game-card">
+                                <div class="game-icon">🎲</div>
+                                <h3>Кубик Рубика</h3>
+                                <p>3D головоломка</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🔲</div>
+                                <h3>Пятнашки</h3>
+                                <p>Классическая игра</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">📐</div>
+                                <h3>Танграм</h3>
+                                <p>Собери фигуру</p>
+                                <button class="btn-primary">Играть</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Развитие мозга -->
+                    <div class="tab-pane" id="brainTab">
+                        <h2>Тренировка мозга</h2>
+                        <div class="games-grid">
+                            <div class="game-card">
+                                <div class="game-icon">🧠</div>
+                                <h3>Тест памяти</h3>
+                                <p>Запомни последовательность</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">👁️</div>
+                                <h3>Тест внимания</h3>
+                                <p>Найди отличия</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">⚡</div>
+                                <h3>Скорость реакции</h3>
+                                <p>Проверь свою скорость</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🔢</div>
+                                <h3>Математика</h3>
+                                <p>Решай примеры</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Релаксация -->
+                    <div class="tab-pane" id="relaxTab">
+                        <h2>Медитация и релаксация</h2>
+                        <div class="games-grid">
+                            <div class="game-card">
+                                <div class="game-icon">🫁</div>
+                                <h3>Дыхательные упражнения</h3>
+                                <p>Техники глубокого дыхания</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🧘</div>
+                                <h3>Медитация</h3>
+                                <p>Гайдовая медитация</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🌅</div>
+                                <h3>Визуализация</h3>
+                                <p>Путешествие в спокойное место</p>
+                                <button class="btn-primary">Начать</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Музыка -->
+                    <div class="tab-pane" id="musicTab">
+                        <h2>Фоновая музыка и звуки</h2>
+                        <div class="games-grid">
+                            <div class="game-card">
+                                <div class="game-icon">🌊</div>
+                                <h3>Белый шум</h3>
+                                <button class="btn-primary">▶️ Включить</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🌧️</div>
+                                <h3>Дождь</h3>
+                                <button class="btn-primary">▶️ Включить</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🌲</div>
+                                <h3>Лес</h3>
+                                <button class="btn-primary">▶️ Включить</button>
+                            </div>
+                            <div class="game-card">
+                                <div class="game-icon">🎵</div>
+                                <h3>Lofi Music</h3>
+                                <button class="btn-primary">▶️ Включить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Рекорды -->
+            <section class="records-section">
+                <h2>🏆 Твои рекорды</h2>
+                <div class="records-grid">
+                    <div class="record-card">
+                        <span class="record-game">2048</span>
+                        <span class="record-score">0</span>
+                    </div>
+                    <div class="record-card">
+                        <span class="record-game">Змейка</span>
+                        <span class="record-score">0</span>
+                    </div>
+                    <div class="record-card">
+                        <span class="record-game">Тест памяти</span>
+                        <span class="record-score">0</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <style>
+        .main-content {
+            padding: calc(var(--global-header-height, 80px) + 2rem) 0 2rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #cbd5e1;
+            font-size: 1.1rem;
+        }
+
+        .tabs-section {
+            margin-bottom: 3rem;
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-button:hover {
+            color: #f1f5f9;
+        }
+
+        .tab-button.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        .tabs-content {
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .tab-pane h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .game-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: #6366f1;
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .game-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .game-card p {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            transform: scale(1.05);
+        }
+
+        .records-section {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .records-section h2 {
+            margin-bottom: 1.5rem;
+        }
+
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .record-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .record-game {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .record-score {
+            display: block;
+            font-size: 1.5rem;
+            color: #6366f1;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .tabs-nav {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .games-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .records-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+
+    <script>
+        // Переключение табов
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.getAttribute('data-tab');
+                
+                // Скрываем все табы
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Показываем выбранный таб
+                document.getElementById(tabName + 'Tab').classList.add('active');
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

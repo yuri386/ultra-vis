@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#d32f2f"/>
+  <circle cx="100" cy="100" r="70" fill="white" opacity="0.2"/>
+  <path d="M100 40 L140 100 L120 100 L140 160 L60 160 L80 100 L60 100 Z" fill="white"/>
+  <text x="100" y="185" font-size="14" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">СПбГУ</text>
+</svg>

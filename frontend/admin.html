@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - UltraWise</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .admin-sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #1f2937, #111827);
+            color: white;
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid #374151;
+        }
+
+        .admin-brand {
+            padding: 0 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 1rem;
+        }
+
+        .admin-nav {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-nav-item {
+            color: #d1d5db;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-nav-item:hover,
+        .admin-nav-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: white;
+            border-left-color: #6366f1;
+        }
+
+        .admin-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .panel-section {
+            display: none;
+        }
+
+        .panel-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .content-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-card h2 {
+            margin-top: 0;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items-table th {
+            background: #f3f4f6;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .items-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .items-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-dialog {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 200px;
+            }
+            .admin-content {
+                margin-left: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script src="/js/auth-manager.js"></script>
+
+    <!-- Проверка админ прав -->
+    <script>
+        if (!window.auth.isAdmin) {
+            alert('Только администраторы могут访問 这一页');
+            window.location.href = '/index.html';
+        }
+    </script>
+
+    <!-- Боковая панель -->
+    <aside class="admin-sidebar">
+        <div class="admin-brand">
+            <h2 style="margin: 0; font-size: 1.25rem;">Admin Panel</h2>
+        </div>
+        <nav class="admin-nav">
+            <a href="#dashboard" class="admin-nav-item active" data-section="dashboard">
+                <span>📊</span> Панель
+            </a>
+            <a href="#lectures" class="admin-nav-item" data-section="lectures">
+                <span>📚</span> Лекции
+            </a>
+            <a href="#colleges" class="admin-nav-item" data-section="colleges">
+                <span>🎓</span> Колледжи
+            </a>
+            <a href="#users" class="admin-nav-item" data-section="users">
+                <span>👥</span> Пользователи
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Основной контент -->
+    <div class="admin-content">
+        <!-- Панель управления -->
+        <div class="panel-section active" data-section="dashboard">
+            <div class="content-card">
+                <h2>Панель управления</h2>
+                <div id="stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px;">
+                        <div style="font-size: 0.875rem; color: #0369a1; font-weight: 600;">Всего пользователей</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #1f2937;" id="stat-users">0</div>
+                    </div>
+                    <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px;">
+                        <div style="font-size: 0.875rem; color: #166534; font-weight: 600;">Всего лекций</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #1f2937;" id="stat-lectures">0</div>
+                    </div>
+                    <div style="background: #faf5ff; padding: 1.5rem; border-radius: 8px;">
+                        <div style="font-size: 0.875rem; color: #6b21a8; font-weight: 600;">Всего колледжей</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #1f2937;" id="stat-colleges">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Лекции -->
+        <div class="panel-section" data-section="lectures">
+            <div class="content-card">
+                <h2>Управление лекциями</h2>
+                <button class="btn-primary" style="margin-bottom: 1.5rem;" onclick="openLectureForm()">+ Добавить лекцию</button>
+                <div id="lectures-list"></div>
+            </div>
+        </div>
+
+        <!-- Колледжи -->
+        <div class="panel-section" data-section="colleges">
+            <div class="content-card">
+                <h2>Управление колледжами</h2>
+                <button class="btn-primary" style="margin-bottom: 1.5rem;" onclick="openCollegeForm()">+ Добавить колледж</button>
+                <div id="colleges-list"></div>
+            </div>
+        </div>
+
+        <!-- Пользователи -->
+        <div class="panel-section" data-section="users">
+            <div class="content-card">
+                <h2>Пользователи</h2>
+                <div id="users-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно форм -->
+    <div class="modal-overlay" id="formModal">
+        <div class="modal-dialog">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="formTitle" style="margin: 0;"></h3>
+                <button onclick="closeForm()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+            </div>
+            <form id="mainForm">
+                <div id="formFields"></div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary">Сохранить</button>
+                    <button type="button" class="btn-primary" onclick="closeForm()" style="background: #9ca3af;">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentFormType = null;
+        let currentEditId = null;
+
+        // Навигация между разделами
+        document.querySelectorAll('[data-section]').forEach(el => {
+            if (el.classList.contains('admin-nav-item')) {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = el.dataset.section;
+                    
+                    document.querySelectorAll('.admin-nav-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    el.classList.add('active');
+
+                    document.querySelectorAll('.panel-section').forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+
+                    if (section === 'lectures') loadLectures();
+                    if (section === 'colleges') loadColleges();
+                    if (section === 'users') loadUsers();
+                });
+            }
+        });
+
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const data = await window.auth.apiRequest('/admin/stats');
+                document.getElementById('stat-users').textContent = data.stats.totalUsers;
+                document.getElementById('stat-lectures').textContent = data.stats.totalLectures;
+                document.getElementById('stat-colleges').textContent = data.stats.totalColleges;
+            } catch (e) {
+                console.error('Ошибка загрузки статистики:', e);
+            }
+        }
+
+        // Загрузка лекций
+        async function loadLectures() {
+            try {
+                const data = await window.auth.apiRequest('/admin/lectures');
+                const html = `
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Уровень</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(data.lectures || []).map(lecture => `
+                                <tr>
+                                    <td>${lecture.title}</td>
+                                    <td>${lecture.category}</td>
+                                    <td>${lecture.level}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn-small btn-edit" onclick="editLecture(${lecture.id})">Редактировать</button>
+                                            <button class="btn-small btn-delete" onclick="deleteLecture(${lecture.id})">Удалить</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('lectures-list').innerHTML = html;
+            } catch (e) {
+                console.error('Ошибка загрузки лекций:', e);
+            }
+        }
+
+        // Загрузка колледжей
+        async function loadColleges() {
+            try {
+                const data = await window.auth.apiRequest('/admin/colleges');
+                const html = `
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Тип</th>
+                                <th>Город</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(data.colleges || []).map(college => `
+                                <tr>
+                                    <td>${college.name}</td>
+                                    <td>${college.type}</td>
+                                    <td>${college.city}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn-small btn-edit" onclick="editCollege(${college.id})">Редактировать</button>
+                                            <button class="btn-small btn-delete" onclick="deleteCollege(${college.id})">Удалить</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('colleges-list').innerHTML = html;
+            } catch (e) {
+                console.error('Ошибка загрузки колледжей:', e);
+            }
+        }
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            try {
+                // Для простоты показываем сообщение
+                document.getElementById('users-list').innerHTML = '<p style="color: #666;">Функция управления пользователями будет добавлена позже</p>';
+            } catch (e) {
+                console.error('Ошибка загрузки пользователей:', e);
+            }
+        }
+
+        // Открыть форму лекции
+        function openLectureForm() {
+            currentFormType = 'lecture';
+            currentEditId = null;
+            document.getElementById('formTitle').textContent = 'Добавить лекцию';
+            document.getElementById('formFields').innerHTML = `
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание *</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Категория *</label>
+                    <input type="text" name="category" required>
+                </div>
+                <div class="form-group">
+                    <label>Уровень *</label>
+                    <select name="level" required>
+                        <option>Начальный</option>
+                        <option>Средний</option>
+                        <option>Продвинутый</option>
+                        <option>Экспертный</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Автор *</label>
+                    <input type="text" name="author" required>
+                </div>
+                <div class="form-group">
+                    <label>Длительность (мин)</label>
+                    <input type="number" name="duration">
+                </div>
+            `;
+            document.getElementById('formModal').classList.add('active');
+            document.getElementById('mainForm').onsubmit = saveLecture;
+        }
+
+        // Открыть форму колледжа
+        function openCollegeForm() {
+            currentFormType = 'college';
+            currentEditId = null;
+            document.getElementById('formTitle').textContent = 'Добавить колледж';
+            document.getElementById('formFields').innerHTML = `
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Тип *</label>
+                    <input type="text" name="type" required>
+                </div>
+                <div class="form-group">
+                    <label>Город *</label>
+                    <input type="text" name="city" required>
+                </div>
+                <div class="form-group">
+                    <label>Адрес</label>
+                    <input type="text" name="address">
+                </div>
+                <div class="form-group">
+                    <label>Сайт</label>
+                    <input type="url" name="website">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea name="description"></textarea>
+                </div>
+            `;
+            document.getElementById('formModal').classList.add('active');
+            document.getElementById('mainForm').onsubmit = saveCollege;
+        }
+
+        // Сохранить лекцию
+        async function saveLecture(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const body = Object.fromEntries(formData);
+            body.level = document.querySelector('[name="level"]').value;
+
+            try {
+                const endpoint = currentEditId 
+                    ? `/admin/lectures/${currentEditId}`
+                    : '/admin/lectures';
+                const method = currentEditId ? 'PUT' : 'POST';
+                
+                await fetch(`http://localhost:3000/api${endpoint}`, {
+                    method,
+                    headers: window.auth.getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                
+                closeForm();
+                loadLectures();
+                alert('Лекция сохранена!');
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        // Сохранить колледж
+        async function saveCollege(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const body = Object.fromEntries(formData);
+
+            try {
+                const endpoint = currentEditId 
+                    ? `/admin/colleges/${currentEditId}`
+                    : '/admin/colleges';
+                const method = currentEditId ? 'PUT' : 'POST';
+                
+                await fetch(`http://localhost:3000/api${endpoint}`, {
+                    method,
+                    headers: window.auth.getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                
+                closeForm();
+                loadColleges();
+                alert('Колледж сохранён!');
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        // Удалить лекцию
+        async function deleteLecture(id) {
+            if (!confirm('Удалить лекцию?')) return;
+            try {
+                await fetch(`http://localhost:3000/api/admin/lectures/${id}`, {
+                    method: 'DELETE',
+                    headers: window.auth.getHeaders()
+                });
+                loadLectures();
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        // Удалить колледж
+        async function deleteCollege(id) {
+            if (!confirm('Удалить колледж?')) return;
+            try {
+                await fetch(`http://localhost:3000/api/admin/colleges/${id}`, {
+                    method: 'DELETE',
+                    headers: window.auth.getHeaders()
+                });
+                loadColleges();
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        // Закрыть форму
+        function closeForm() {
+            document.getElementById('formModal').classList.remove('active');
+        }
+
+        // Загрузить статистику при загрузке
+        loadStats();
+    </script>
+</body>
+</html>

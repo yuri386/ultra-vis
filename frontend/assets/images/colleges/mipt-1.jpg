@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0066cc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#003d99;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#grad5)"/>
+  <rect x="120" y="100" width="100" height="250" fill="#ffcc00" opacity="0.8"/>
+  <rect x="350" y="80" width="100" height="270" fill="#ffcc00" opacity="0.8"/>
+  <rect x="580" y="120" width="100" height="230" fill="#ffcc00" opacity="0.8"/>
+  <circle cx="170" cy="90" r="20" fill="#ff3333"/>
+  <circle cx="400" cy="70" r="20" fill="#ff3333"/>
+  <circle cx="630" cy="110" r="20" fill="#ff3333"/>
+  <text x="400" y="380" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">МФТИ</text>
+</svg>

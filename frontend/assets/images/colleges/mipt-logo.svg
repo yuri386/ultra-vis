@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#0066cc"/>
+  <rect x="40" y="50" width="30" height="100" fill="#ffcc00"/>
+  <rect x="90" y="50" width="30" height="100" fill="#ffcc00"/>
+  <rect x="140" y="50" width="30" height="100" fill="#ffcc00"/>
+  <circle cx="55" cy="40" r="15" fill="#ff3333"/>
+  <circle cx="105" cy="40" r="15" fill="#ff3333"/>
+  <circle cx="155" cy="40" r="15" fill="#ff3333"/>
+  <text x="100" y="180" font-size="12" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">МФТИ</text>
+</svg>

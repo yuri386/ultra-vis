@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraWise - Добавить лекцию</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/animations.css">
+</head>
+<!-- index.html, lectures.html, orientation.html и т.д. -->
+<script src="/js/api.js"></script>
+<script src="/js/components.js"></script>
+<script src="/js/animations.js"></script>
+<script src="/js/theme-switcher.js"></script>
+<body>
+    <div class="admin-layout">
+        <!-- Боковая панель админа -->
+        <aside class="admin-sidebar">
+            <div class="admin-brand">
+                <h2>UltraWise Admin</h2>
+            </div>
+            <nav class="admin-nav">
+                <a href="dashboard.html" class="admin-nav-item">
+                    <span class="icon">📊</span>
+                    <span>Панель управления</span>
+                </a>
+                <a href="add-lecture.html" class="admin-nav-item active">
+                    <span class="icon">📚</span>
+                    <span>Добавить лекцию</span>
+                </a>
+                <a href="add-college.html" class="admin-nav-item">
+                    <span class="icon">🎓</span>
+                    <span>Добавить колледж</span>
+                </a>
+                <a href="../lectures.html" class="admin-nav-item">
+                    <span class="icon">📖</span>
+                    <span>Просмотр лекций</span>
+                </a>
+                <a href="../orientation.html" class="admin-nav-item">
+                    <span class="icon">🧭</span>
+                    <span>Просмотр колледжей</span>
+                </a>
+                <div class="admin-nav-divider"></div>
+                <a href="../index.html" class="admin-nav-item">
+                    <span class="icon">🏠</span>
+                    <span>На главную</span>
+                </a>
+                <a href="#" class="admin-nav-item" id="logoutBtn">
+                    <span class="icon">🚪</span>
+                    <span>Выйти</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Основной контент -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>Добавить новую лекцию</h1>
+                <div class="admin-breadcrumb">
+                    <a href="dashboard.html">Панель управления</a>
+                    <span>/</span>
+                    <span>Добавить лекцию</span>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <!-- Форма добавления лекции -->
+                <form id="addLectureForm" class="admin-form">
+                    <!-- Основная информация -->
+                    <div class="form-section">
+                        <h2>Основная информация</h2>
+                        
+                        <div class="form-group">
+                            <label for="lectureTitle">Название лекции *</label>
+                            <input type="text" id="lectureTitle" name="title" required 
+                                   placeholder="Введите название лекции">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="lectureCategory">Категория *</label>
+                                <select id="lectureCategory" name="category" required>
+                                    <option value="">Выберите категорию</option>
+                                    <option value="mathematics">Математика</option>
+                                    <option value="physics">Физика</option>
+                                    <option value="chemistry">Химия</option>
+                                    <option value="biology">Биология</option>
+                                    <option value="history">История</option>
+                                    <option value="literature">Литература</option>
+                                    <option value="programming">Программирование</option>
+                                    <option value="psychology">Психология</option>
+                                    <option value="economics">Экономика</option>
+                                    <option value="self-development">Саморазвитие</option>
+                                    <option value="other">Другое</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lectureLevel">Уровень сложности *</label>
+                                <select id="lectureLevel" name="level" required>
+                                    <option value="">Выберите уровень</option>
+                                    <option value="beginner">Начальный</option>
+                                    <option value="intermediate">Средний</option>
+                                    <option value="advanced">Продвинутый</option>
+                                    <option value="expert">Экспертный</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureAuthor">Автор лекции *</label>
+                            <input type="text" id="lectureAuthor" name="author" required 
+                                   placeholder="Имя автора">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="lectureDuration">Длительность (минуты)</label>
+                                <input type="number" id="lectureDuration" name="duration" 
+                                       min="1" placeholder="30">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lectureDate">Дата публикации</label>
+                                <input type="date" id="lectureDate" name="date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Описание -->
+                    <div class="form-section">
+                        <h2>Описание</h2>
+                        
+                        <div class="form-group">
+                            <label for="lectureDescription">Краткое описание *</label>
+                            <textarea id="lectureDescription" name="description" 
+                                      rows="3" required
+                                      placeholder="Краткое описание лекции (до 200 символов)"></textarea>
+                            <span class="char-counter">0 / 200</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureContent">Полное содержание лекции *</label>
+                            <textarea id="lectureContent" name="content" 
+                                      rows="15" required
+                                      placeholder="Полный текст лекции с форматированием"></textarea>
+                            <div class="editor-toolbar">
+                                <button type="button" class="toolbar-btn" data-format="bold">
+                                    <strong>B</strong>
+                                </button>
+                                <button type="button" class="toolbar-btn" data-format="italic">
+                                    <em>I</em>
+                                </button>
+                                <button type="button" class="toolbar-btn" data-format="heading">
+                                    H
+                                </button>
+                                <button type="button" class="toolbar-btn" data-format="list">
+                                    • List
+                                </button>
+                                <button type="button" class="toolbar-btn" data-format="code">
+                                    &lt;/&gt;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Медиа -->
+                    <div class="form-section">
+                        <h2>Медиа материалы</h2>
+                        
+                        <div class="form-group">
+                            <label for="lectureThumbnail">Обложка лекции</label>
+                            <div class="file-upload">
+                                <input type="file" id="lectureThumbnail" name="thumbnail" 
+                                       accept="image/*">
+                                <div class="file-upload-preview" id="thumbnailPreview">
+                                    <span class="placeholder">Выберите изображение</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureVideo">Видео URL (опционально)</label>
+                            <input type="url" id="lectureVideo" name="videoUrl" 
+                                   placeholder="https://youtube.com/watch?v=...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureAttachments">Дополнительные файлы</label>
+                            <input type="file" id="lectureAttachments" name="attachments" 
+                                   multiple>
+                            <small>PDF, DOCX, PPTX (макс. 10MB каждый)</small>
+                        </div>
+                    </div>
+
+                    <!-- Теги и ключевые слова -->
+                    <div class="form-section">
+                        <h2>Теги и ключевые слова</h2>
+                        
+                        <div class="form-group">
+                            <label for="lectureTags">Теги</label>
+                            <input type="text" id="lectureTags" name="tags" 
+                                   placeholder="математика, алгебра, уравнения (разделяйте запятыми)">
+                            <small>Теги помогают пользователям находить лекции</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureKeywords">Ключевые слова для поиска</label>
+                            <input type="text" id="lectureKeywords" name="keywords" 
+                                   placeholder="Ключевые слова через запятую">
+                        </div>
+                    </div>
+
+                    <!-- Настройки доступа -->
+                    <div class="form-section">
+                        <h2>Настройки доступа</h2>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="lecturePublished" name="published" checked>
+                                <span>Опубликовать сразу</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="lectureFeatured" name="featured">
+                                <span>Рекомендуемая лекция</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="lectureComments" name="allowComments" checked>
+                                <span>Разрешить комментарии</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки действий -->
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="previewBtn">
+                            👁️ Предпросмотр
+                        </button>
+                        <button type="button" class="btn-secondary" id="saveDraftBtn">
+                            💾 Сохранить как черновик
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            ✅ Опубликовать лекцию
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно предпросмотра -->
+    <div class="modal" id="previewModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Предпросмотр лекции</h2>
+                <button class="close-btn" id="closePreview">×</button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Предпросмотр будет здесь -->
+            </div>
+        </div>
+    </div>
+
+    <!-- В конце КАЖДОГО HTML файла перед </body> -->
+    <script src="/js/app.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components.js"></script>
+    <script src="/js/animations.js"></script>
+
+
+    <script>
+        // Проверка прав администратора
+        document.addEventListener('DOMContentLoaded', function() {
+            // Здесь будет проверка авторизации админа
+            
+            // Обработчик формы
+            const form = document.getElementById('addLectureForm');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const lectureData = Object.fromEntries(formData);
+                
+                try {
+                    // Отправка на сервер
+                    const response = await fetch('/api/admin/lectures', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        },
+                        body: JSON.stringify(lectureData)
+                    });
+                    
+                    if (response.ok) {
+                        alert('Лекция успешно добавлена!');
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        alert('Ошибка при добавлении лекции');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка');
+                }
+            });
+
+            // Счётчик символов
+            const description = document.getElementById('lectureDescription');
+            const counter = document.querySelector('.char-counter');
+            description.addEventListener('input', function() {
+                counter.textContent = `${this.value.length} / 200`;
+            });
+
+            // Предпросмотр обложки
+            const thumbnailInput = document.getElementById('lectureThumbnail');
+            const thumbnailPreview = document.getElementById('thumbnailPreview');
+            thumbnailInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        thumbnailPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Предпросмотр лекции
+            document.getElementById('previewBtn').addEventListener('click', function() {
+                const title = document.getElementById('lectureTitle').value;
+                const content = document.getElementById('lectureContent').value;
+                const author = document.getElementById('lectureAuthor').value;
+                
+                const previewHTML = `
+                    <div class="lecture-preview">
+                        <h1>${title || 'Название лекции'}</h1>
+                        <p class="author">Автор: ${author || 'Не указан'}</p>
+                        <div class="content">${content || 'Контент не добавлен'}</div>
+                    </div>
+                `;
+                
+                document.getElementById('previewContent').innerHTML = previewHTML;
+                document.getElementById('previewModal').classList.add('active');
+            });
+
+            document.getElementById('closePreview').addEventListener('click', function() {
+                document.getElementById('previewModal').classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>
