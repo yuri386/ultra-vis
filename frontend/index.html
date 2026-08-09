@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ultra VIS — Your career, in focus</title>
   <link rel="stylesheet" href="/css/ultravis.css">
+  <link rel="stylesheet" href="/css/ultravis-ai.css">
 </head>
 <body class="app-page">
   <header class="topbar">
@@ -70,7 +71,20 @@
       <a class="button button-primary" href="https://skillland-platform-yuri386.onrender.com/profile.html">Continue in SkillLand <span aria-hidden="true">→</span></a>
     </section>
   </main>
+  <div class="ultra-ai-dock" id="ultraAiDock">
+    <form class="ultra-ai-composer" id="ultraAiForm">
+      <button class="ultra-ai-toggle" id="ultraAiToggle" type="button" aria-expanded="false" aria-label="Open Ultra VIS AI"><span>Ultra VIS AI</span></button>
+      <input id="ultraAiInput" type="text" autocomplete="off" placeholder="Ask Ultra VIS AI" aria-label="Message for Ultra VIS AI">
+      <button class="ultra-ai-send" type="submit" aria-label="Send message">Send</button>
+    </form>
+  </div>
+  <div class="ultra-ai-backdrop" id="ultraAiBackdrop" aria-hidden="true"></div>
+  <section class="ultra-ai-chat" id="ultraAiChat" aria-live="polite" aria-label="Conversation with Ultra VIS AI">
+    <div class="ultra-ai-chat-head"><div><p class="eyebrow">ULTRA VIS AI</p><strong>Your learning assistant</strong></div><button id="ultraAiClose" type="button">Minimize</button></div>
+    <div class="ultra-ai-messages" id="ultraAiMessages"></div>
+  </section>
   <footer class="footer"><span>© 2026 SkillLand</span><span>Ultra VIS is powered by your SkillLand profile.</span></footer>
   <script src="/js/ultravis-app.js"></script>
+  <script src="/js/ultravis-ai.js"></script>
 </body>
 </html>

@@ -23,8 +23,8 @@
     workspace.className = `vis-workspace view-${view}`;
     try {
       if (view === 'home') return renderHome();
-      if (view === 'lectures') return renderLectures();
-      if (view === 'colleges') return renderColleges();
+      if (view === 'lectures') { const lectureId = new URLSearchParams(location.search).get('lecture'); return lectureId ? renderLecture(lectureId) : renderLectures(); }
+      if (view === 'colleges') { const collegeId = new URLSearchParams(location.search).get('college'); return collegeId ? renderCollege(collegeId) : renderColleges(); }
       if (view === 'notes') return renderNotes();
       if (view === 'day') return renderDay();
       if (view === 'quiz') return renderQuiz();
@@ -218,6 +218,58 @@
     if (!event.target.dataset.task) return;
     await api(`/api/content/tasks/${event.target.dataset.task}`, { method: 'PATCH', body: JSON.stringify({ completed: event.target.checked }) });
   });
+
+  function setupUltraAi() {
+    const dock = document.getElementById('ultraAiDock');
+    const form = document.getElementById('ultraAiForm');
+    const toggle = document.getElementById('ultraAiToggle');
+    const input = document.getElementById('ultraAiInput');
+    const send = form?.querySelector('.ultra-ai-send');
+    const chat = document.getElementById('ultraAiChat');
+    const messages = document.getElementById('ultraAiMessages');
+    const close = document.getElementById('ultraAiClose');
+    const backdrop = document.getElementById('ultraAiBackdrop');
+    if (!dock || !form || !toggle || !input || !send || !chat || !messages || !close || !backdrop) return;
+
+    const expand = () => { dock.classList.add('is-expanded'); toggle.setAttribute('aria-expanded', 'true'); setTimeout(() => input.focus(), 240); };
+    const collapse = () => { dock.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); input.value = ''; };
+    const closeChat = () => { document.body.classList.remove('ultra-ai-chat-open'); collapse(); };
+    const append = (role, copy, result = {}) => {
+      const message = document.createElement('article'); message.className = `ultra-ai-message ${role}`;
+      if (role === 'assistant') { const label = document.createElement('span'); label.className = 'ai-label'; label.textContent = 'ULTRA VIS AI'; message.appendChild(label); }
+      const text = document.createElement('p'); text.textContent = copy; message.appendChild(text);
+      if (Array.isArray(result.suggestions) && result.suggestions.length) {
+        const suggestionList = document.createElement('div'); suggestionList.className = 'ultra-ai-suggestions';
+        result.suggestions.forEach(item => {
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'ultra-ai-suggestion';
+          button.innerHTML = `<strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.meta || '')}</small>`;
+          button.addEventListener('click', () => { if (item.view === 'lecture') renderLecture(item.id); if (item.view === 'college') renderCollege(item.id); });
+          suggestionList.appendChild(button);
+        }); message.appendChild(suggestionList);
+      }
+      if (result.action?.view) {
+        const action = document.createElement('button'); action.type = 'button'; action.className = 'ultra-ai-action'; action.textContent = result.action.label || 'Открыть'; action.addEventListener('click', () => go(result.action.view)); message.appendChild(action);
+      }
+      messages.appendChild(message); messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }); return message;
+    };
+    const thinking = () => { const item = document.createElement('div'); item.className = 'ultra-ai-thinking'; item.innerHTML = '<i></i><span>Ultra VIS AI обрабатывает запрос</span>'; messages.appendChild(item); messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }); return item; };
+
+    toggle.addEventListener('click', () => dock.classList.contains('is-expanded') && !input.value ? collapse() : expand());
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!dock.classList.contains('is-expanded')) return expand();
+      const message = input.value.trim(); if (!message) return input.focus();
+      document.body.classList.add('ultra-ai-chat-open'); append('user', message); input.value = ''; send.disabled = true; const loader = thinking();
+      try {
+        const result = await api('/api/assistant', { method: 'POST', body: JSON.stringify({ message }) });
+        loader.remove(); append('assistant', result.reply, result);
+      } catch (error) { loader.remove(); append('assistant', error.message || 'Не удалось выполнить запрос. Попробуй ещё раз.'); }
+      finally { send.disabled = false; input.focus(); }
+    });
+    close.addEventListener('click', closeChat); backdrop.addEventListener('click', closeChat);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && document.body.classList.contains('ultra-ai-chat-open')) closeChat(); });
+  }
+
   document.getElementById('logoutButton')?.addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/'; });
   window.addEventListener('popstate', () => render(currentView()));
   document.documentElement.dataset.visTheme = localStorage.getItem('uv-theme') || 'light';

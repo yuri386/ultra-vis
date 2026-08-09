@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/css/ultravis-product.css">
   <link rel="stylesheet" href="/css/ultravis-learning.css">
   <link rel="stylesheet" href="/css/ultravis-theme-library.css">
+  <link rel="stylesheet" href="/css/ultravis-ai.css">
   <link rel="stylesheet" href="/css/ultravis-themes.css">
 </head>
 <body class="vis-product-page">
@@ -31,8 +32,21 @@
     </section>
     <section class="vis-workspace" id="workspace" aria-live="polite"></section>
   </main>
+  <div class="ultra-ai-dock" id="ultraAiDock">
+    <form class="ultra-ai-composer" id="ultraAiForm">
+      <button class="ultra-ai-toggle" id="ultraAiToggle" type="button" aria-expanded="false" aria-label="Открыть Ultra VIS AI"><span>Ultra VIS AI</span></button>
+      <input id="ultraAiInput" type="text" autocomplete="off" placeholder="Спроси Ultra VIS AI" aria-label="Сообщение для Ultra VIS AI">
+      <button class="ultra-ai-send" type="submit" aria-label="Отправить сообщение">Отправить</button>
+    </form>
+  </div>
+  <div class="ultra-ai-backdrop" id="ultraAiBackdrop" aria-hidden="true"></div>
+  <section class="ultra-ai-chat" id="ultraAiChat" aria-live="polite" aria-label="Диалог с Ultra VIS AI">
+    <div class="ultra-ai-chat-head"><div><p class="eyebrow">ULTRA VIS AI</p><strong>Твой учебный помощник</strong></div><button id="ultraAiClose" type="button">Свернуть</button></div>
+    <div class="ultra-ai-messages" id="ultraAiMessages"></div>
+  </section>
   <footer class="footer vis-footer"><span>© 2026 SkillLand</span><span>Ultra VIS — твоя образовательная траектория.</span></footer>
   <script src="/js/ultravis-app.js"></script>
   <script src="/js/ultravis-dashboard.js"></script>
+  <script src="/js/ultravis-ai.js"></script>
 </body>
 </html>

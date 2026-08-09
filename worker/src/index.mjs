@@ -213,6 +213,81 @@ function quizAnalysis(answers) {
   return { primary, secondary, summary: copy[primary] };
 }
 
+function assistantTopic(message) {
+  const value = String(message || '').toLowerCase();
+  if (/(python|javascript|код|сайт|программ)/.test(value)) return 'Программирование';
+  if (/(вектор|матриц|алгебр|математ)/.test(value)) return 'Математика';
+  if (/(физик|квант|оптик)/.test(value)) return 'Физика';
+  if (/(биолог|клетк)/.test(value)) return 'Биология';
+  if (/(хими|молекул|органическ)/.test(value)) return 'Химия';
+  if (/(эконом|рынок|цен|деньг)/.test(value)) return 'Экономика';
+  if (/(истори|архив)/.test(value)) return 'История';
+  if (/(англий|язык|презентац)/.test(value)) return 'Языки';
+  if (/(этик|философ|выбор|ценност)/.test(value)) return 'Философия';
+  return '';
+}
+
+function assistantShortText(value, limit = 120) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
+
+async function ultraVisAssistant(request, session, env) {
+  if (!session) return apiUnauthorized();
+  const body = await requestJson(request);
+  const message = String(body.message || '').trim().slice(0, 1600);
+  if (!message) return Response.json({ success: false, error: 'Напиши запрос для Ultra VIS AI.' }, { status: 400 });
+  const userId = Number(session.sub);
+  const lower = message.toLowerCase();
+
+  if (/(созда|добав|запиш|сделай).{0,40}(заметк|конспект)|^(заметк|конспект)/.test(lower)) {
+    const title = `Заметка: ${assistantShortText(message.replace(/.*?(заметк[ауи]?|конспект)[\s:—-]*/i, ''), 72) || 'Новая мысль'}`;
+    const noteBody = `Создано по запросу Ultra VIS AI.\n\n${message}`;
+    const result = await env.DB.prepare('INSERT INTO notes (user_id, title, body, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(userId, title, noteBody).run();
+    return Response.json({ success: true, reply: 'Готово. Я создал заметку в твоей личной библиотеке Ultra VIS.', action: { type: 'note', id: result.meta.last_row_id, label: 'Открыть заметки', view: 'notes' } });
+  }
+
+  if (/(задач|план.*день|список.*дел|распиши.*день)/.test(lower)) {
+    const focus = assistantShortText(message.replace(/.*?(задач[ауи]?|план.*?день|список.*?дел)[\s:—-]*/i, ''), 90) || 'следующий учебный шаг';
+    const isPlan = /(план|список|распиши)/.test(lower);
+    const tasks = isPlan
+      ? [`Определить цель: ${focus}`, 'Открыть одну подходящую лекцию Ultra VIS', 'Зафиксировать вывод в заметке']
+      : [`${focus.charAt(0).toUpperCase()}${focus.slice(1)}`];
+    for (const title of tasks) await env.DB.prepare('INSERT INTO daily_tasks (user_id, title) VALUES (?, ?)').bind(userId, title.slice(0, 160)).run();
+    return Response.json({ success: true, reply: isPlan ? 'Готово. Я добавил три спокойных шага в «Мой день».' : 'Готово. Задача добавлена в «Мой день».', action: { type: 'tasks', label: 'Открыть мой день', view: 'day' } });
+  }
+
+  const wantsCollege = /(сред[ауе]|университет|вуз|колледж|поступить|учебн.*завед)/.test(lower);
+  if (wantsCollege) {
+    const cityMatch = lower.match(/(москв[аеы]|санкт[-\s]?петербург[еа]?|казан[ьи]|новосибирск[еа]?)/);
+    const city = cityMatch ? cityMatch[1].replace(/^москв[аеы]$/, 'Москва').replace(/^санкт[-\s]?петербург[еа]?$/, 'Санкт-Петербург').replace(/^казан[ьи]$/, 'Казань').replace(/^новосибирск[еа]?$/, 'Новосибирск') : '';
+    const rows = await env.DB.prepare(`SELECT id, name, city, specialties, rating FROM colleges ${city ? 'WHERE city = ?' : ''} ORDER BY rating DESC, id LIMIT 3`).bind(...(city ? [city] : [])).all();
+    const choices = rows.results || [];
+    const answer = choices.length ? `Я подобрал ${choices.length} варианта. Смотри на направления, город и рейтинг — затем открой карточку и сравни их.` : 'В текущем каталоге пока нет точного совпадения. Открой направление и сравни доступные варианты.';
+    return Response.json({ success: true, reply: answer, suggestions: choices.map(item => ({ id: item.id, title: item.name, meta: `${item.city} · ${item.specialties} · рейтинг ${item.rating}`, view: 'college' })) });
+  }
+
+  const topic = assistantTopic(message);
+  if (topic || /(лекци|учить|изуч|посовет|рекоменд)/.test(lower)) {
+    const rows = await env.DB.prepare(`SELECT id, title, category, description, duration FROM lectures ${topic ? 'WHERE category = ?' : ''} ORDER BY views DESC, id LIMIT 3`).bind(...(topic ? [topic] : [])).all();
+    const choices = rows.results || [];
+    const answer = topic ? `Для темы «${topic}» я выбрал материалы, с которых проще начать.` : 'Вот материалы, которые чаще всего становятся хорошей первой точкой. Скажи тему точнее — и я сузлю выбор.';
+    return Response.json({ success: true, reply: answer, suggestions: choices.map(item => ({ id: item.id, title: item.title, meta: `${item.category} · ${item.duration} минут`, view: 'lecture' })) });
+  }
+
+  // Free-form questions use the existing SkillLand AI when it is available.
+  try {
+    const response = await fetch(`${env.SKILLLAND_URL.replace(/\/$/, '')}/api/ai/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ message, conversation_key: `ultravis-${userId}` })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.reply) return Response.json({ success: true, reply: String(result.reply).slice(0, 2400) });
+  } catch {
+    // A useful local response below keeps Ultra VIS functional if the model is busy.
+  }
+  return Response.json({ success: true, reply: 'Я помогу превратить запрос в действие. Напиши, например: «создай заметку по лекции», «составь задачи на день», «посоветуй лекцию по Python» или «подбери учебную среду в Москве».' });
+}
+
 async function contentApi(request, path, session, env) {
   if (!session) return apiUnauthorized();
   const userId = Number(session.sub);
@@ -398,6 +473,7 @@ export default {
     if (path === '/api/health') return Response.json({ ok: true, service: 'ultravis', database: 'cloudflare-d1' });
     if (path === '/api/auth/session') return session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 });
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
+    if (path === '/api/assistant' && request.method === 'POST') return ultraVisAssistant(request, session, env);
     if (path.startsWith('/api/content/')) return contentApi(request, path, session, env);
 
     if (path === '/auth/skillland' && request.method === 'GET') {
