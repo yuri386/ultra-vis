@@ -92,7 +92,14 @@ function cleanProfile(profile) {
   const fullName = String(profile?.full_name || profile?.name || '').trim().replace(/\s+/g, ' ').slice(0, 120);
   const id = Number(profile?.id);
   if (!Number.isInteger(id) || id < 1 || !email.includes('@') || fullName.length < 2) return null;
-  return { id, email, fullName };
+  return {
+    id,
+    email,
+    fullName,
+    role: profile?.role === 'employer' ? 'employer' : 'student',
+    headline: String(profile?.headline || '').trim().slice(0, 180),
+    syncToken: String(profile?.sync_token || '').trim()
+  };
 }
 
 function nicknameFor(profile) {
@@ -107,7 +114,8 @@ async function exchangeSkillLandTicket(ticket, env) {
   });
   if (!response.ok) return null;
   const body = await response.json();
-  return cleanProfile(body?.user);
+  const profile = cleanProfile({ ...(body?.user || {}), sync_token: body?.sync_token });
+  return profile;
 }
 
 async function upsertUser(profile, env) {
@@ -115,14 +123,14 @@ async function upsertUser(profile, env) {
     .bind(profile.id, profile.email)
     .first();
   if (existing) {
-    await env.DB.prepare('UPDATE users SET skillland_user_id = ?, email = ?, full_name = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .bind(profile.id, profile.email, profile.fullName, existing.id)
+    await env.DB.prepare('UPDATE users SET skillland_user_id = ?, email = ?, full_name = ?, skillland_role = ?, skillland_headline = ?, skillland_sync_token = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(profile.id, profile.email, profile.fullName, profile.role, profile.headline, profile.syncToken, existing.id)
       .run();
     return { ...existing, skillland_user_id: profile.id, email: profile.email, full_name: profile.fullName };
   }
   const nickname = nicknameFor(profile);
-  const inserted = await env.DB.prepare('INSERT INTO users (skillland_user_id, email, full_name, nickname) VALUES (?, ?, ?, ?)')
-    .bind(profile.id, profile.email, profile.fullName, nickname)
+  const inserted = await env.DB.prepare('INSERT INTO users (skillland_user_id, email, full_name, nickname, skillland_role, skillland_headline, skillland_sync_token) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(profile.id, profile.email, profile.fullName, nickname, profile.role, profile.headline, profile.syncToken)
     .run();
   return { id: inserted.meta.last_row_id, skillland_user_id: profile.id, email: profile.email, full_name: profile.fullName, nickname };
 }
@@ -139,7 +147,7 @@ const legacyProductRoutes = {
   '/myday.html': 'day',
   '/games.html': 'games',
   '/profile.html': 'profile',
-  '/quotes.html': 'home'
+  '/quotes.html': 'quotes'
 };
 
 function apiUnauthorized() {
@@ -150,12 +158,68 @@ async function requestJson(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
+async function learningSnapshot(userId, env) {
+  const [totals, current, quiz] = await Promise.all([
+    env.DB.prepare(`SELECT
+      (SELECT COUNT(*) FROM lectures) AS total,
+      COUNT(lp.lecture_id) AS started,
+      SUM(CASE WHEN lp.progress >= 100 THEN 1 ELSE 0 END) AS completed
+      FROM lecture_progress lp WHERE lp.user_id = ?`).bind(userId).first(),
+    env.DB.prepare(`SELECT l.id, l.title, l.category, lp.progress, lp.last_opened_at
+      FROM lecture_progress lp JOIN lectures l ON l.id = lp.lecture_id
+      WHERE lp.user_id = ? ORDER BY lp.last_opened_at DESC LIMIT 1`).bind(userId).first(),
+    env.DB.prepare(`SELECT primary_direction, secondary_direction, summary, created_at
+      FROM quiz_results WHERE user_id = ? ORDER BY id DESC LIMIT 1`).bind(userId).first()
+  ]);
+  const total = Number(totals?.total || 0);
+  const started = Number(totals?.started || 0);
+  const completed = Number(totals?.completed || 0);
+  return {
+    total,
+    started,
+    completed,
+    completion_rate: total ? Math.round((completed / total) * 100) : 0,
+    current: current ? { id: current.id, title: current.title, category: current.category, progress: Number(current.progress || 0), last_opened_at: current.last_opened_at } : null,
+    quiz: quiz || null
+  };
+}
+
+async function mirrorLearningToSkillLand(userId, env) {
+  const user = await env.DB.prepare('SELECT skillland_sync_token FROM users WHERE id = ?').bind(userId).first();
+  if (!user?.skillland_sync_token) return;
+  const snapshot = await learningSnapshot(userId, env);
+  try {
+    await fetch(`${env.SKILLLAND_URL.replace(/\/$/, '')}/api/ultravis/progress`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${user.skillland_sync_token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ summary: snapshot })
+    });
+  } catch {
+    // Study data is still safely stored in D1. The next meaningful action retries the mirror.
+  }
+}
+
+function quizAnalysis(answers) {
+  const score = { technology: 0, science: 0, people: 0 };
+  for (const value of Object.values(answers || {})) if (Object.hasOwn(score, value)) score[value] += 1;
+  const ordered = Object.entries(score).sort((a, b) => b[1] - a[1]);
+  const primary = ordered[0]?.[0] || 'technology';
+  const secondary = ordered[1]?.[0] || '';
+  const copy = {
+    technology: 'Тебе близко создание цифровых продуктов: начни с JavaScript или Python и добавляй работу в портфолио SkillLand.',
+    science: 'Тебя заряжает исследование закономерностей: попробуй физику, биологию или химию и фиксируй наблюдения в заметках.',
+    people: 'Твоя сильная сторона — идеи, коммуникация и осмысленный выбор: начни с английского, экономики или этики.'
+  };
+  return { primary, secondary, summary: copy[primary] };
+}
+
 async function contentApi(request, path, session, env) {
   if (!session) return apiUnauthorized();
   const userId = Number(session.sub);
-  const account = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(userId).first();
+  const account = await env.DB.prepare('SELECT is_admin, skillland_role, skillland_headline FROM users WHERE id = ?').bind(userId).first();
   const isAdmin = Boolean(account?.is_admin);
   const lectureMatch = path.match(/^\/api\/content\/lectures\/(\d+)(?:\/(save))?$/);
+  const lectureProgressMatch = path.match(/^\/api\/content\/lectures\/(\d+)\/progress$/);
   const collegeMatch = path.match(/^\/api\/content\/colleges\/(\d+)(?:\/(favorite))?$/);
 
   if (path === '/api/content/admin/status' && request.method === 'GET') return Response.json({ success: true, isAdmin });
@@ -164,18 +228,29 @@ async function contentApi(request, path, session, env) {
     const rows = await env.DB.prepare('SELECT code, title, description, unlocked_at FROM user_achievements WHERE user_id = ? ORDER BY unlocked_at').bind(userId).all();
     return Response.json({ success: true, data: rows.results });
   }
+  if (path === '/api/content/learning-profile' && request.method === 'GET') {
+    const snapshot = await learningSnapshot(userId, env);
+    return Response.json({ success: true, data: { ...snapshot, role: account?.skillland_role || 'student', headline: account?.skillland_headline || '' } });
+  }
 
   if (path === '/api/content/lectures' && request.method === 'GET') {
-    const rows = await env.DB.prepare('SELECT id, title, description, category, level, duration, author, image, views FROM lectures ORDER BY id').all();
+    const rows = await env.DB.prepare(`SELECT l.id, l.title, l.description, l.category, l.level, l.duration, l.author, l.image, l.views,
+      COALESCE(lp.progress, 0) AS progress, lp.last_opened_at
+      FROM lectures l LEFT JOIN lecture_progress lp ON lp.lecture_id = l.id AND lp.user_id = ? ORDER BY l.id`).bind(userId).all();
     const saved = await env.DB.prepare('SELECT lecture_id FROM saved_lectures WHERE user_id = ?').bind(userId).all();
     const savedIds = new Set(saved.results.map(row => row.lecture_id));
-    return Response.json({ success: true, data: rows.results.map(row => ({ ...row, saved: savedIds.has(row.id) })) });
+    return Response.json({ success: true, data: rows.results.map(row => ({ ...row, progress: Number(row.progress || 0), completed: Number(row.progress || 0) >= 100, saved: savedIds.has(row.id) })) });
   }
   if (lectureMatch && !lectureMatch[2] && request.method === 'GET') {
     const lecture = await env.DB.prepare('SELECT * FROM lectures WHERE id = ?').bind(Number(lectureMatch[1])).first();
     if (!lecture) return Response.json({ success: false, error: 'Lecture not found.' }, { status: 404 });
+    await env.DB.prepare(`INSERT INTO lecture_progress (user_id, lecture_id, progress, last_opened_at, updated_at)
+      VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, lecture_id) DO UPDATE SET last_opened_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).bind(userId, lecture.id).run();
     const saved = await env.DB.prepare('SELECT 1 FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first();
-    return Response.json({ success: true, data: { ...lecture, saved: Boolean(saved) } });
+    const progress = await env.DB.prepare('SELECT progress, completed_at FROM lecture_progress WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first();
+    await mirrorLearningToSkillLand(userId, env);
+    return Response.json({ success: true, data: { ...lecture, saved: Boolean(saved), progress: Number(progress?.progress || 0), completed: Number(progress?.progress || 0) >= 100 } });
   }
   if (lectureMatch && lectureMatch[2] === 'save' && request.method === 'POST') {
     const lectureId = Number(lectureMatch[1]);
@@ -183,6 +258,35 @@ async function contentApi(request, path, session, env) {
     if (exists) await env.DB.prepare('DELETE FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lectureId).run();
     else await env.DB.prepare('INSERT OR IGNORE INTO saved_lectures (user_id, lecture_id) VALUES (?, ?)').bind(userId, lectureId).run();
     return Response.json({ success: true, saved: !exists });
+  }
+  if (lectureProgressMatch && request.method === 'POST') {
+    const lectureId = Number(lectureProgressMatch[1]);
+    const exists = await env.DB.prepare('SELECT id FROM lectures WHERE id = ?').bind(lectureId).first();
+    if (!exists) return Response.json({ success: false, error: 'Лекция не найдена.' }, { status: 404 });
+    const body = await requestJson(request);
+    const progress = Math.max(0, Math.min(100, Math.round(Number(body.progress) || 0)));
+    const completed = progress >= 100;
+    await env.DB.prepare(`INSERT INTO lecture_progress (user_id, lecture_id, progress, completed_at, last_opened_at, updated_at)
+      VALUES (?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, lecture_id) DO UPDATE SET progress = excluded.progress,
+        completed_at = CASE WHEN excluded.progress >= 100 THEN COALESCE(lecture_progress.completed_at, CURRENT_TIMESTAMP) ELSE NULL END,
+        last_opened_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).bind(userId, lectureId, progress, completed ? 1 : 0).run();
+    if (completed) await env.DB.prepare("INSERT OR IGNORE INTO user_achievements (user_id, code, title, description) VALUES (?, ?, 'Лекция завершена', 'Ты завершил учебный материал и закрепил следующий шаг')").bind(userId, `lecture-${lectureId}-complete`).run();
+    await mirrorLearningToSkillLand(userId, env);
+    return Response.json({ success: true, progress, completed });
+  }
+
+  if (path === '/api/content/quiz' && request.method === 'GET') {
+    const item = await env.DB.prepare('SELECT primary_direction, secondary_direction, summary, created_at FROM quiz_results WHERE user_id = ? ORDER BY id DESC LIMIT 1').bind(userId).first();
+    return Response.json({ success: true, data: item || null });
+  }
+  if (path === '/api/content/quiz' && request.method === 'POST') {
+    const body = await requestJson(request);
+    const result = quizAnalysis(body.answers);
+    await env.DB.prepare('INSERT INTO quiz_results (user_id, primary_direction, secondary_direction, summary) VALUES (?, ?, ?, ?)').bind(userId, result.primary, result.secondary, result.summary).run();
+    await env.DB.prepare("INSERT OR IGNORE INTO user_achievements (user_id, code, title, description) VALUES (?, 'direction-test', 'Своя траектория', 'Ты сформулировал первый ориентир для дальнейшего обучения')").bind(userId).run();
+    await mirrorLearningToSkillLand(userId, env);
+    return Response.json({ success: true, data: result });
   }
 
   if (path === '/api/content/colleges' && request.method === 'GET') {

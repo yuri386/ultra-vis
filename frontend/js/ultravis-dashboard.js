@@ -1,17 +1,21 @@
 (() => {
   const workspace = document.getElementById('workspace');
   const hero = document.getElementById('hero');
-  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, compare: new Set() };
-  const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char]));
+  const skillLandUrl = 'https://skillland-platform-yuri386.onrender.com';
+  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, compare: new Set() };
+  const escapeHTML = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const api = async (url, options = {}) => {
     const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
-    if (!response.ok) throw new Error('Не удалось загрузить данные.');
-    return response.json();
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Не удалось получить данные. Попробуй ещё раз.');
+    return body;
   };
-  const go = view => { history.pushState({}, '', `/dashboard?view=${view}`); render(view); };
   const currentView = () => new URLSearchParams(location.search).get('view') || 'home';
-  const card = (icon, title, text, view, label = 'Открыть') => `<button class="module-card" data-view="${view}"><span class="module-icon">${icon}</span><strong>${title}</strong><small>${text}</small><b>${label} &rarr;</b></button>`;
+  const go = view => { history.pushState({}, '', `/dashboard?view=${view}`); render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const setTitle = (eyebrow, title, text) => `<div class="section-heading"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p>${text}</p></div>`;
+  const empty = text => `<p class="empty-copy">${escapeHTML(text)}</p>`;
+  const progressLabel = value => value >= 100 ? 'Завершено' : value > 0 ? `${value}% изучено` : 'Новая лекция';
+  const progressState = value => value >= 100 ? 'done' : value > 0 ? 'active' : 'new';
 
   async function render(view = currentView()) {
     document.querySelectorAll('[data-view]').forEach(item => item.classList.toggle('is-active', item.dataset.view === view));
@@ -31,76 +35,191 @@
       if (view === 'themes') return renderThemes();
       return renderHome();
     } catch (error) {
-      workspace.innerHTML = `${setTitle('ULTRA VIS', 'Не удалось открыть раздел', 'Проверь подключение и попробуй ещё раз.')}<button class="button button-primary" data-view="home">На главную</button>`;
+      workspace.innerHTML = `${setTitle('ULTRA VIS', 'Раздел временно недоступен', error.message)}<button class="button button-primary" data-view="home">На главную</button>`;
     }
   }
 
-  function renderHome() {
-    workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Продолжай с того, что важно сегодня.', 'Весь исходный функционал UltraWise теперь собран в одной понятной оболочке.')}
-      <div class="module-grid">${card('📚','Лекции','Каталог материалов с поиском и сохранением.','lectures','Смотреть')}${card('🎓','Профориентация','Сравни учебные заведения и сохрани интересные.','colleges','Выбрать')}${card('✓','Мой день','Собери личный список задач на сегодня.','day','Планировать')}${card('✦','Тест направления','Небольшой интерактивный ориентир для старта.','quiz','Пройти')}${card('📝','Заметки','Конспекты сохраняются в твоём аккаунте.','notes','Открыть')}${card('💬','Цитаты','Сохрани мысль, к которой хочешь вернуться.','quotes','Смотреть')}${card('🎮','Практика','Лёгкая игра на фокус и скорость реакции.','games','Играть')}${card('◐','Тема','Настрой вид пространства под себя.','themes','Выбрать')}</div>`;
+  async function getLearning() {
+    state.learning = (await api('/api/content/learning-profile')).data;
+    return state.learning;
+  }
+
+  async function renderHome() {
+    const learning = await getLearning();
+    const current = learning.current;
+    const continueBlock = current
+      ? `<button class="continue-panel" data-open-lecture="${current.id}"><span>Продолжить</span><strong>${escapeHTML(current.title)}</strong><small>${current.progress}% изучено · ${escapeHTML(current.category)}</small><b>Открыть лекцию</b></button>`
+      : `<button class="continue-panel continue-panel-start" data-view="lectures"><span>Твоя траектория</span><strong>Начни с первой лекции</strong><small>Выбирай направление, сохраняй главное и возвращайся в удобный момент.</small><b>Открыть библиотеку</b></button>`;
+    const modules = [
+      ['01', 'Лекции', 'Большие понятные материалы и твой прогресс.', 'lectures', 'Учиться'],
+      ['02', 'Направление', 'Сравнение учебных маршрутов и специальностей.', 'colleges', 'Выбрать'],
+      ['03', 'Тест', 'Четыре вопроса, чтобы выбрать следующий шаг.', 'quiz', 'Пройти'],
+      ['04', 'Мой день', 'Одна цель и понятные действия на сегодня.', 'day', 'Спланировать'],
+      ['05', 'Заметки', 'Конспекты, к которым легко вернуться.', 'notes', 'Открыть'],
+      ['06', 'Практика', 'Короткая пауза для фокуса.', 'games', 'Начать'],
+      ['07', 'Идеи', 'Мысли, которые стоит сохранить.', 'quotes', 'Посмотреть'],
+      ['08', 'Оформление', 'Выбери спокойный режим для работы.', 'themes', 'Настроить']
+    ];
+    workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Учёба, которая ведёт к следующему шагу.', 'Ultra VIS соединён с твоим профилем SkillLand. Прогресс, выбранное направление и вывод теста остаются с тобой.')}<section class="learning-overview"><div><span>Освоено</span><strong>${learning.completed} из ${learning.total}</strong><small>лекций завершено</small></div><div><span>В работе</span><strong>${learning.started}</strong><small>материалов открыто</small></div><div><span>Темп</span><strong>${learning.completion_rate}%</strong><small>общий прогресс</small></div></section>${continueBlock}<div class="module-grid">${modules.map(([number, title, text, view, label]) => `<button class="module-card" data-view="${view}"><span class="module-index">${number}</span><strong>${title}</strong><small>${text}</small><b>${label} <span aria-hidden="true">→</span></b></button>`).join('')}</div>`;
   }
 
   async function renderLectures() {
     if (!state.lectures.length) state.lectures = (await api('/api/content/lectures')).data;
-    const draw = list => { workspace.innerHTML = `${setTitle('БАЗА ЗНАНИЙ','Лекции и материалы','Ищи по теме, сохраняй нужное и возвращайся к ним в удобный момент.')}<div class="catalog-tools"><input id="lectureSearch" placeholder="Поиск лекций"><select id="lectureCategory"><option value="">Все темы</option>${[...new Set(state.lectures.map(item => item.category))].map(item => `<option>${esc(item)}</option>`).join('')}</select></div><div class="content-grid">${list.map(item => `<article class="content-card"><img src="${item.image}" alt=""><div><span>${esc(item.category)} · ${esc(item.level)}</span><h3>${esc(item.title)}</h3><p>${esc(item.description)}</p><small>${item.duration} мин · ${esc(item.author)}</small><div class="card-actions"><button data-open-lecture="${item.id}">Открыть</button><button class="icon-button" data-save-lecture="${item.id}" aria-label="Сохранить">${item.saved ? '★' : '☆'}</button></div></div></article>`).join('')}</div>`; bindLectureFilters(); };
+    const categories = [...new Set(state.lectures.map(item => item.category))];
+    const draw = list => {
+      workspace.innerHTML = `${setTitle('БИБЛИОТЕКА', 'Лекции, в которых есть смысл.', 'Каждая тема — отдельный подробный материал с примером, мини-практикой и сохранением твоего места.')}<div class="catalog-tools"><input id="lectureSearch" autocomplete="off" placeholder="Поиск по теме"><select id="lectureCategory"><option value="">Все темы</option>${categories.map(item => `<option value="${escapeHTML(item)}">${escapeHTML(item)}</option>`).join('')}</select></div><div class="content-grid lecture-grid">${list.map(item => `<article class="content-card lecture-card"><img src="${escapeHTML(item.image)}" alt=""><div><div class="content-topline"><span>${escapeHTML(item.category)}</span><span class="progress-state ${progressState(item.progress)}">${progressLabel(item.progress)}</span></div><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.description)}</p><small>${item.duration} минут · ${escapeHTML(item.author)}</small><div class="card-actions"><button data-open-lecture="${item.id}">Открыть</button><button class="save-text ${item.saved ? 'is-saved' : ''}" data-save-lecture="${item.id}">${item.saved ? 'Сохранено' : 'Сохранить'}</button></div></div></article>`).join('')}</div>`;
+      const search = document.getElementById('lectureSearch');
+      const category = document.getElementById('lectureCategory');
+      const filter = () => {
+        const term = search.value.trim().toLowerCase();
+        draw(state.lectures.filter(item => (!category.value || item.category === category.value) && `${item.title} ${item.description} ${item.category}`.toLowerCase().includes(term)));
+        document.getElementById('lectureSearch').value = term;
+        document.getElementById('lectureCategory').value = category.value;
+      };
+      search.addEventListener('input', filter); category.addEventListener('change', filter);
+    };
     draw(state.lectures);
-    window.drawLectures = draw;
   }
-  function bindLectureFilters() {
-    const filter = () => { const term = document.getElementById('lectureSearch').value.toLowerCase(); const cat = document.getElementById('lectureCategory').value; window.drawLectures(state.lectures.filter(item => (!cat || item.category === cat) && `${item.title} ${item.description}`.toLowerCase().includes(term))); };
-    document.getElementById('lectureSearch').oninput = filter; document.getElementById('lectureCategory').onchange = filter;
+
+  function lectureBlocks(content) {
+    return String(content || '').split(/\n\s*\n/).filter(Boolean).map(block => {
+      const [heading, ...copy] = block.split('\n');
+      return `<section class="lecture-reading-block"><h3>${escapeHTML(heading)}</h3>${copy.map(line => `<p>${escapeHTML(line)}</p>`).join('')}</section>`;
+    }).join('');
   }
+
   async function renderLecture(id) {
     const item = (await api(`/api/content/lectures/${id}`)).data;
-    workspace.innerHTML = `<button class="back-link" data-view="lectures">&larr; Все лекции</button><article class="lesson-detail"><img src="${item.image}" alt=""><div><span>${esc(item.category)} · ${esc(item.level)}</span><h2>${esc(item.title)}</h2><p>${esc(item.description)}</p><p class="lesson-copy">${esc(item.content)}</p><p class="muted">${item.duration} минут · ${esc(item.author)}</p><button class="button button-primary" data-save-lecture="${item.id}">${item.saved ? 'Убрать из сохранённых' : 'Сохранить лекцию'}</button></div></article>`;
+    workspace.innerHTML = `<button class="back-link" data-view="lectures">← Все лекции</button><article class="lesson-detail lesson-detail-hero"><img src="${escapeHTML(item.image)}" alt=""><div><span>${escapeHTML(item.category)} · ${escapeHTML(item.level)}</span><h2>${escapeHTML(item.title)}</h2><p>${escapeHTML(item.description)}</p><p class="muted">${item.duration} минут · ${escapeHTML(item.author)}</p><div class="lesson-actions"><button class="button button-primary" data-save-lecture="${item.id}">${item.saved ? 'Убрать из сохранённых' : 'Сохранить лекцию'}</button><span class="progress-state ${progressState(item.progress)}">${progressLabel(item.progress)}</span></div></div></article><section class="reading-layout"><article class="lesson-reading">${lectureBlocks(item.content)}</article><aside class="learning-side"><p class="eyebrow">ТВОЙ ПРОГРЕСС</p><strong id="progressValue">${item.progress}%</strong><input id="lectureProgress" type="range" min="0" max="100" value="${item.progress}" aria-label="Прогресс лекции"><p>Отметь, где остановился. При 100% лекция попадёт в достижения и обновит профиль SkillLand.</p><button class="button button-primary" id="saveProgress">Сохранить прогресс</button><button class="quiet-button" id="completeLecture">Завершить лекцию</button><p class="progress-feedback" id="progressFeedback"></p></aside></section>`;
+    const range = document.getElementById('lectureProgress');
+    range.addEventListener('input', () => { document.getElementById('progressValue').textContent = `${range.value}%`; });
+    const save = async value => {
+      const result = await api(`/api/content/lectures/${item.id}/progress`, { method: 'POST', body: JSON.stringify({ progress: value }) });
+      state.lectures = [];
+      document.getElementById('progressFeedback').textContent = result.completed ? 'Лекция завершена. Результат отправлен в твой профиль SkillLand.' : 'Место сохранено. Ты сможешь вернуться сюда в любой момент.';
+    };
+    document.getElementById('saveProgress').addEventListener('click', () => save(range.value));
+    document.getElementById('completeLecture').addEventListener('click', () => { range.value = 100; document.getElementById('progressValue').textContent = '100%'; save(100); });
   }
 
   async function renderColleges() {
     if (!state.colleges.length) state.colleges = (await api('/api/content/colleges')).data;
-    const draw = list => { const chosen=state.colleges.filter(item=>state.compare.has(item.id)); workspace.innerHTML = `${setTitle('ПРОФОРИЕНТАЦИЯ','Найди среду, где ты раскроешься.','Сравни программы, города и направления. Сохраняй то, что хочешь изучить дальше.')}<div class="catalog-tools"><input id="collegeSearch" placeholder="Поиск учебного заведения"></div>${chosen.length?`<div class="quiz-card"><b>Сравнение:</b> ${chosen.map(x=>`${esc(x.name)} — ${esc(x.city)} · ${x.rating}`).join('<br>')}</div>`:''}<div class="content-grid college-grid">${list.map(item => `<article class="content-card"><img src="${item.image}" alt=""><div><span>${esc(item.city)} · ${esc(item.type)}</span><h3>${esc(item.name)}</h3><p>${esc(item.description)}</p><small>★ ${item.rating} · ${esc(item.specialties)}</small><div class="card-actions"><button data-open-college="${item.id}">Подробнее</button><button data-compare-college="${item.id}">${state.compare.has(item.id)?'Убрать':'Сравнить'}</button><button class="icon-button" data-favorite-college="${item.id}" aria-label="В избранное">${item.favorite ? '♥' : '♡'}</button></div></div></article>`).join('')}</div>`; document.getElementById('collegeSearch').oninput = event => draw(state.colleges.filter(item => `${item.name} ${item.city} ${item.specialties}`.toLowerCase().includes(event.target.value.toLowerCase()))); };
+    const draw = list => {
+      const chosen = state.colleges.filter(item => state.compare.has(item.id));
+      workspace.innerHTML = `${setTitle('НАПРАВЛЕНИЕ', 'Найди среду, в которой раскроешься.', 'Сравни программы, города и специальности. Сохрани варианты, которые подходят твоему учебному маршруту.')}<div class="catalog-tools"><input id="collegeSearch" placeholder="Поиск учебного заведения"></div>${chosen.length ? `<section class="comparison-panel"><span>Сравнение</span>${chosen.map(item => `<strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.city)} · рейтинг ${item.rating}</small>`).join('')}</section>` : ''}<div class="content-grid college-grid">${list.map(item => `<article class="content-card"><img src="${escapeHTML(item.image)}" alt=""><div><span>${escapeHTML(item.city)} · ${escapeHTML(item.type)}</span><h3>${escapeHTML(item.name)}</h3><p>${escapeHTML(item.description)}</p><small>Рейтинг ${item.rating} · ${escapeHTML(item.specialties)}</small><div class="card-actions"><button data-open-college="${item.id}">Подробнее</button><button class="save-text ${state.compare.has(item.id) ? 'is-saved' : ''}" data-compare-college="${item.id}">${state.compare.has(item.id) ? 'В сравнении' : 'Сравнить'}</button></div></div></article>`).join('')}</div>`;
+      const search = document.getElementById('collegeSearch');
+      search.addEventListener('input', () => draw(state.colleges.filter(item => `${item.name} ${item.city} ${item.specialties}`.toLowerCase().includes(search.value.toLowerCase()))));
+    };
     draw(state.colleges);
   }
+
   async function renderCollege(id) {
-    const item = (await api(`/api/content/colleges/${id}`)).data;
-    const reviews=(await api(`/api/content/colleges/${id}/reviews`)).data;
-    workspace.innerHTML = `<button class="back-link" data-view="colleges">&larr; Все заведения</button><article class="lesson-detail"><img src="${item.image}" alt=""><div><span>${esc(item.city)} · ${esc(item.type)}</span><h2>${esc(item.name)}</h2><p>${esc(item.description)}</p><p class="lesson-copy"><b>Направления:</b> ${esc(item.specialties)}</p><p class="muted">Рейтинг сообщества: ★ ${item.rating}</p><button class="button button-primary" data-favorite-college="${item.id}">Сохранить в избранное</button></div></article><section class="vis-workspace"><h3>Отзывы</h3><form id="reviewForm" class="task-form"><input name="body" placeholder="Твой отзыв" required><select name="rating"><option value="5">5 ★</option><option value="4">4 ★</option><option value="3">3 ★</option></select><button class="button button-primary">Отправить</button></form>${reviews.map(x=>`<article class="note-card"><b>★ ${x.rating}</b><p>${esc(x.body)}</p></article>`).join('')||'<p class="empty-copy">Пока нет отзывов.</p>'}</section>`;
-    document.getElementById('reviewForm').onsubmit=async e=>{e.preventDefault();const data=new FormData(e.target);await api(`/api/content/colleges/${id}/reviews`,{method:'POST',body:JSON.stringify({body:data.get('body'),rating:data.get('rating')})});renderCollege(id);};
+    const [collegeData, reviewsData] = await Promise.all([api(`/api/content/colleges/${id}`), api(`/api/content/colleges/${id}/reviews`)]);
+    const item = collegeData.data, reviews = reviewsData.data;
+    workspace.innerHTML = `<button class="back-link" data-view="colleges">← Все учебные заведения</button><article class="lesson-detail"><img src="${escapeHTML(item.image)}" alt=""><div><span>${escapeHTML(item.city)} · ${escapeHTML(item.type)}</span><h2>${escapeHTML(item.name)}</h2><p>${escapeHTML(item.description)}</p><p class="lesson-copy"><b>Направления:</b> ${escapeHTML(item.specialties)}</p><p class="muted">Рейтинг сообщества: ${item.rating}</p><button class="button button-primary" data-favorite-college="${item.id}">Сохранить вариант</button></div></article><section class="review-section"><h3>Отзывы</h3><form id="reviewForm" class="task-form"><input name="body" placeholder="Твой краткий отзыв" required><select name="rating"><option value="5">Оценка: 5</option><option value="4">Оценка: 4</option><option value="3">Оценка: 3</option></select><button class="button button-primary">Отправить</button></form>${reviews.map(review => `<article class="note-card"><b>Оценка ${review.rating}</b><p>${escapeHTML(review.body)}</p></article>`).join('') || empty('Пока нет отзывов.')}</section>`;
+    document.getElementById('reviewForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); await api(`/api/content/colleges/${id}/reviews`, { method: 'POST', body: JSON.stringify({ body: form.get('body'), rating: form.get('rating') }) }); renderCollege(id); });
   }
 
   async function renderNotes() {
     state.notes = (await api('/api/content/notes')).data;
-    workspace.innerHTML = `${setTitle('ЛИЧНАЯ БИБЛИОТЕКА','Заметки','Новые заметки сохраняются в твоём аккаунте Ultra VIS.')}<form class="note-form" id="newNote"><input name="title" placeholder="Название заметки" required><textarea name="body" placeholder="Начни писать..." required></textarea><button class="button button-primary">Сохранить</button></form><div class="notes-grid">${state.notes.map(item => `<article class="note-card"><h3>${esc(item.title)}</h3><p>${esc(item.body)}</p><small>${esc(item.updated_at)}</small><button data-delete-note="${item.id}">Удалить</button></article>`).join('') || '<p class="empty-copy">Пока нет заметок. Создай первую.</p>'}</div>`;
-    document.getElementById('newNote').onsubmit = async event => { event.preventDefault(); const form = new FormData(event.target); await api('/api/content/notes', { method:'POST', body: JSON.stringify({title:form.get('title'), body:form.get('body')}) }); renderNotes(); };
+    workspace.innerHTML = `${setTitle('ЛИЧНАЯ БИБЛИОТЕКА', 'Заметки без потери мысли.', 'Конспекты сохраняются в твоём аккаунте Ultra VIS.')}<form class="note-form" id="newNote"><input name="title" placeholder="Название заметки" required><textarea name="body" placeholder="Начни писать..." required></textarea><button class="button button-primary">Сохранить</button></form><div class="notes-grid">${state.notes.map(item => `<article class="note-card"><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.body)}</p><small>${escapeHTML(item.updated_at)}</small><button data-delete-note="${item.id}">Удалить</button></article>`).join('') || empty('Пока нет заметок. Создай первую.')}</div>`;
+    document.getElementById('newNote').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); await api('/api/content/notes', { method: 'POST', body: JSON.stringify({ title: form.get('title'), body: form.get('body') }) }); renderNotes(); });
   }
 
   async function renderDay() {
     state.tasks = (await api('/api/content/tasks')).data;
-    workspace.innerHTML = `${setTitle('МОЙ ДЕНЬ','Собери день вокруг одной цели.','Добавь задачу, отметь прогресс и не теряй темп.')}<form class="task-form" id="newTask"><input name="title" placeholder="Например: посмотреть лекцию по Python" required><button class="button button-primary">Добавить</button></form><div class="task-list">${state.tasks.map(item => `<label class="task-item"><input type="checkbox" data-task="${item.id}" ${item.completed ? 'checked':''}><span>${esc(item.title)}</span><button type="button" data-delete-task="${item.id}">&times;</button></label>`).join('') || '<p class="empty-copy">Сегодня пока нет задач.</p>'}</div>`;
-    document.getElementById('newTask').onsubmit = async event => { event.preventDefault(); const title = new FormData(event.target).get('title'); await api('/api/content/tasks', { method:'POST', body: JSON.stringify({ title }) }); renderDay(); };
+    workspace.innerHTML = `${setTitle('МОЙ ДЕНЬ', 'Собери день вокруг одной цели.', 'Добавь действие, отметь результат и не теряй темп.')}<form class="task-form" id="newTask"><input name="title" placeholder="Например: завершить лекцию по Python" required><button class="button button-primary">Добавить</button></form><div class="task-list">${state.tasks.map(item => `<label class="task-item"><input type="checkbox" data-task="${item.id}" ${item.completed ? 'checked' : ''}><span>${escapeHTML(item.title)}</span><button type="button" aria-label="Удалить задачу" data-delete-task="${item.id}">×</button></label>`).join('') || empty('Сегодня пока нет задач.')}</div>`;
+    document.getElementById('newTask').addEventListener('submit', async event => { event.preventDefault(); const title = new FormData(event.target).get('title'); await api('/api/content/tasks', { method: 'POST', body: JSON.stringify({ title }) }); renderDay(); });
   }
-  function renderQuiz() { workspace.innerHTML = `${setTitle('ИНТЕРАКТИВНЫЙ ОРИЕНТИР','Что тебе интереснее сейчас?','Это не экзамен, а быстрый способ выбрать следующий раздел.')}<div class="quiz-card"><h3>Выбери задачу, от которой тебе становится интересно.</h3><div class="choice-row"><button data-quiz="tech">Создавать цифровые продукты</button><button data-quiz="science">Понимать, как устроен мир</button><button data-quiz="people">Работать с идеями и людьми</button></div><p id="quizResult"></p></div>`; }
-  function renderGames() { workspace.innerHTML = `${setTitle('ПРАКТИКА','Поймай фокус','Нажми на кнопку, когда будешь готов. Счётчик покажет, как быстро ты среагировал.')}<div class="quiz-card"><button class="button button-primary" id="focusStart">Начать</button><p id="focusResult">Одна короткая игра для перезагрузки между занятиями.</p></div>`; document.getElementById('focusStart').onclick = () => { const started = performance.now(); const button = document.getElementById('focusStart'); button.textContent = 'Нажми сейчас!'; button.onclick = () => { document.getElementById('focusResult').textContent = `Твоя реакция: ${Math.round(performance.now()-started)} мс.`; button.textContent='Ещё раз'; button.onclick = null; }; }; }
-  async function renderProfile() { state.session = (await api('/api/auth/session')).user; const achievements=(await api('/api/content/achievements')).data; const admin=(await api('/api/content/admin/status')).isAdmin; workspace.innerHTML = `${setTitle('ПРОФИЛЬ SKILLLAND','${esc(state.session.name || state.session.email)}','Этот профиль создан через SkillLand и доступен только тебе.')}<div class="profile-summary"><span class="profile-orb">${esc((state.session.name || 'S').slice(0,1))}</span><div><h3>${esc(state.session.name || 'SkillLand user')}</h3><p>${esc(state.session.email)}</p><a href="https://skillland-platform-yuri386.onrender.com/profile.html">Открыть профиль SkillLand &nearr;</a>${admin?'<p><button data-view="admin">Панель управления</button></p>':''}</div></div><h3>Достижения</h3><div class="notes-grid">${achievements.map(x=>`<article class="note-card"><h3>${esc(x.title)}</h3><p>${esc(x.description)}</p></article>`).join('')}</div>`; }
-  async function renderAdmin(){const lectures=(await api('/api/content/lectures')).data;workspace.innerHTML=`${setTitle('УПРАВЛЕНИЕ','Контент Ultra VIS','Добавляй и удаляй материалы без старой отдельной панели.')}<form id="adminLecture" class="note-form"><input name="title" placeholder="Название лекции" required><input name="category" placeholder="Категория" required><textarea name="description" placeholder="Описание"></textarea><button class="button button-primary">Добавить лекцию</button></form><div class="notes-grid">${lectures.map(x=>`<article class="note-card"><h3>${esc(x.title)}</h3><button data-delete-admin-lecture="${x.id}">Удалить</button></article>`).join('')}</div>`;document.getElementById('adminLecture').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);await api('/api/content/admin/lectures',{method:'POST',body:JSON.stringify({title:d.get('title'),category:d.get('category'),description:d.get('description')})});state.lectures=[];renderAdmin();};}
-  function renderQuotes() { const quotes=[['"The future depends on what you do today."','Mahatma Gandhi'],['"The beautiful thing about learning is that nobody can take it away from you."','B. B. King'],['"Small steps every day become real change."','Ultra VIS']]; workspace.innerHTML=`${setTitle('ИДЕИ','Мысли, которые остаются с тобой.','Сохрани понравившуюся мысль в избранное браузера.')}<div class="notes-grid">${quotes.map((q,i)=>`<article class="note-card"><h3>${q[0]}</h3><p>${q[1]}</p><button data-like-quote="${i}">${localStorage.getItem('uv-quote-'+i)==='1'?'♥ Сохранено':'♡ Сохранить'}</button></article>`).join('')}</div>`; }
-  function renderThemes() { const themes=[['light','Светлая'],['dark','Тёмная'],['mist','Мягкая'],['contrast','Контрастная']]; workspace.innerHTML=`${setTitle('ОФОРМЛЕНИЕ','Выбери настроение.','Все основные темы UltraWise сохранены в современной оболочке.')}<div class="choice-row">${themes.map(([id,name])=>`<button data-theme="${id}">${name}</button>`).join('')}</div>`; }
+
+  const quizQuestions = [
+    { text: 'Когда появляется новая задача, что тебе хочется сделать первым?', answers: [['Разобрать её на шаги и собрать решение', 'technology'], ['Найти закономерность и проверить гипотезу', 'science'], ['Понять, для кого это важно, и обсудить идею', 'people']] },
+    { text: 'Какой результат даёт тебе больше энергии?', answers: [['Рабочий сайт, программа или прототип', 'technology'], ['Точный вывод после исследования', 'science'], ['Ясная презентация и решение команды', 'people']] },
+    { text: 'Как тебе удобнее учиться?', answers: [['Сразу собирать и тестировать на практике', 'technology'], ['Наблюдать, измерять и сравнивать факты', 'science'], ['Читать, спорить и объяснять другим', 'people']] },
+    { text: 'Какой следующий шаг звучит ближе?', answers: [['Создать цифровой продукт', 'technology'], ['Исследовать, как устроен мир', 'science'], ['Работать с идеями и людьми', 'people']] }
+  ];
+
+  function renderQuiz() {
+    workspace.innerHTML = `<section class="clean-quiz"><button class="back-link" data-view="home">← Назад</button><p class="eyebrow">ИНТЕРАКТИВНЫЙ ОРИЕНТИР</p><div class="quiz-step" id="quizStep">Вопрос 1 из ${quizQuestions.length}</div><h2 id="quizQuestion"></h2><div class="quiz-options" id="quizOptions"></div><p class="quiz-note">Это не экзамен. Здесь нет неверного выбора — только более точный следующий шаг.</p></section>`;
+    let index = 0, answers = {};
+    const type = text => new Promise(resolve => {
+      const target = document.getElementById('quizQuestion'); target.textContent = ''; let position = 0;
+      const timer = setInterval(() => { target.textContent += text[position] || ''; position += 1; if (position > text.length) { clearInterval(timer); resolve(); } }, 17);
+    });
+    const draw = async () => {
+      const item = quizQuestions[index];
+      document.getElementById('quizStep').textContent = `Вопрос ${index + 1} из ${quizQuestions.length}`;
+      document.getElementById('quizOptions').innerHTML = '';
+      await type(item.text);
+      const options = document.getElementById('quizOptions');
+      item.answers.forEach(([label, value], optionIndex) => {
+        const button = document.createElement('button'); button.type = 'button'; button.style.animationDelay = `${optionIndex * 70}ms`; button.textContent = label;
+        button.addEventListener('click', async () => { answers[`q${index + 1}`] = value; index += 1; if (index < quizQuestions.length) draw(); else finish(); }); options.appendChild(button);
+      });
+    };
+    const finish = async () => {
+      const result = (await api('/api/content/quiz', { method: 'POST', body: JSON.stringify({ answers }) })).data;
+      workspace.innerHTML = `<section class="clean-quiz quiz-result"><button class="back-link" data-view="home">← На главную</button><p class="eyebrow">ТВОЙ ОРИЕНТИР</p><h2>${result.primary === 'technology' ? 'Создавать и собирать.' : result.primary === 'science' ? 'Исследовать и понимать.' : 'Объяснять и объединять.'}</h2><p class="quiz-analysis">${escapeHTML(result.summary)}</p><div class="quiz-actions"><button class="button button-primary" data-view="lectures">Открыть подходящие лекции</button><a class="quiet-link" href="${skillLandUrl}/search.html">Найти людей в SkillLand</a></div><p class="quiz-note">Вывод сохранён в профиле SkillLand и будет помогать с выбором следующих материалов.</p></section>`;
+    };
+    draw();
+  }
+
+  function renderGames() {
+    workspace.innerHTML = `${setTitle('ПРАКТИКА', 'Верни фокус за одну минуту.', 'Нажми старт, дождись сигнала и проверь свою реакцию.')}<section class="focus-practice"><button class="button button-primary" id="focusStart">Начать</button><p id="focusResult">Короткая пауза между занятиями без лишних отвлечений.</p></section>`;
+    const button = document.getElementById('focusStart');
+    const start = () => { button.disabled = true; button.textContent = 'Готовься'; document.getElementById('focusResult').textContent = 'Сигнал появится через несколько секунд.'; const delay = 1600 + Math.random() * 2200; setTimeout(() => { const started = performance.now(); button.disabled = false; button.textContent = 'Нажми сейчас'; button.onclick = () => { document.getElementById('focusResult').textContent = `Твоя реакция: ${Math.round(performance.now() - started)} мс.`; button.textContent = 'Ещё раз'; button.onclick = start; }; }, delay); };
+    button.onclick = start;
+  }
+
+  async function renderProfile() {
+    const [sessionData, achievementsData, learning] = await Promise.all([api('/api/auth/session'), api('/api/content/achievements'), getLearning()]);
+    state.session = sessionData.user;
+    const isEmployer = learning.role === 'employer';
+    const connectionCopy = isEmployer
+      ? 'Твоя учебная аналитика помогает понимать, какие направления и навыки развивают кандидаты на SkillLand.'
+      : 'Твой учебный путь помогает работодателям и наставникам SkillLand увидеть направление, которое ты развиваешь — без открытия личных контактов.';
+    const current = learning.current ? `<button class="profile-current" data-open-lecture="${learning.current.id}"><span>Сейчас изучаешь</span><strong>${escapeHTML(learning.current.title)}</strong><small>${learning.current.progress}% пройдено · продолжить</small></button>` : `<button class="profile-current" data-view="lectures"><span>Следующий шаг</span><strong>Выбери первую лекцию</strong><small>Открой библиотеку и собери свой путь.</small></button>`;
+    workspace.innerHTML = `${setTitle('ПРОФИЛЬ SKILLLAND', escapeHTML(state.session.name || state.session.email), 'Один профиль для обучения, выбора направления и связей с людьми на SkillLand.')}<section class="profile-summary"><span class="profile-orb">${escapeHTML((state.session.name || 'S').slice(0, 1))}</span><div><h3>${escapeHTML(state.session.name || 'Пользователь SkillLand')}</h3><p>${escapeHTML(state.session.email)}</p><a href="${skillLandUrl}/profile.html">Открыть профиль SkillLand ↗</a></div></section><section class="profile-learning"><div class="learning-overview"><div><span>Завершено</span><strong>${learning.completed}</strong><small>из ${learning.total} лекций</small></div><div><span>В работе</span><strong>${learning.started}</strong><small>открытых материалов</small></div><div><span>Результат</span><strong>${learning.completion_rate}%</strong><small>текущий темп</small></div></div>${current}<div class="connection-bridge"><p class="eyebrow">SKILLLAND · СВЯЗЬ</p><h3>${isEmployer ? 'Учебный сигнал кандидатов' : 'Учёба, которая становится видимой'}</h3><p>${connectionCopy}</p><a href="${skillLandUrl}/search.html">${isEmployer ? 'Открыть поиск кандидатов' : 'Открыть поиск работодателей'} →</a></div></section><section class="achievement-section"><h3>Достижения</h3><div class="notes-grid">${achievementsData.data.map(item => `<article class="note-card"><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.description)}</p></article>`).join('') || empty('Первое достижение появится после открытия лекции.')}</div></section>${learning.quiz ? `<section class="quiz-profile-result"><p class="eyebrow">ВЫВОД ТЕСТА</p><p>${escapeHTML(learning.quiz.summary)}</p><button data-view="quiz">Пройти тест ещё раз</button></section>` : `<button class="quiz-profile-result" data-view="quiz"><p class="eyebrow">ВЫБОР НАПРАВЛЕНИЯ</p><p>Пройди короткий тест — его вывод появится здесь и в профиле SkillLand.</p></button>`}${(await api('/api/content/admin/status')).isAdmin ? '<p><button class="quiet-button" data-view="admin">Управление контентом</button></p>' : ''}`;
+  }
+
+  async function renderAdmin() {
+    const lectures = (await api('/api/content/lectures')).data;
+    workspace.innerHTML = `${setTitle('УПРАВЛЕНИЕ', 'Контент Ultra VIS', 'Добавляй или удаляй материалы. Для новых лекций укажи понятное описание и полный текст.')}<form id="adminLecture" class="note-form"><input name="title" placeholder="Название лекции" required><input name="category" placeholder="Категория" required><textarea name="description" placeholder="Краткое описание"></textarea><textarea name="content" placeholder="Полный текст лекции"></textarea><button class="button button-primary">Добавить лекцию</button></form><div class="notes-grid">${lectures.map(item => `<article class="note-card"><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.category)}</p><button data-delete-admin-lecture="${item.id}">Удалить</button></article>`).join('')}</div>`;
+    document.getElementById('adminLecture').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); await api('/api/content/admin/lectures', { method: 'POST', body: JSON.stringify({ title: form.get('title'), category: form.get('category'), description: form.get('description'), content: form.get('content') }) }); state.lectures = []; renderAdmin(); });
+  }
+
+  function renderQuotes() {
+    const quotes = [['Учиться — значит замечать связь между тем, что уже знаешь, и тем, что ещё умеешь узнать.', 'Ultra VIS'], ['Маленький понятный шаг сильнее большого обещания на потом.', 'SkillLand'], ['Хороший вопрос делает путь короче.', 'Ultra VIS']];
+    workspace.innerHTML = `${setTitle('ИДЕИ', 'Мысли, которые остаются с тобой.', 'Сохрани нужную фразу в этом браузере и возвращайся к ней позже.')}<div class="notes-grid">${quotes.map(([text, author], index) => `<article class="note-card"><h3>${escapeHTML(text)}</h3><p>${escapeHTML(author)}</p><button data-like-quote="${index}">${localStorage.getItem(`uv-quote-${index}`) === '1' ? 'Сохранено' : 'Сохранить'}</button></article>`).join('')}</div>`;
+  }
+
+  function renderThemes() {
+    const themes = [['light', 'Светлая'], ['dark', 'Тёмная'], ['oled', 'OLED'], ['business-light', 'Деловая светлая'], ['business-dark', 'Деловая тёмная'], ['cyberpunk-light', 'Акцентная светлая'], ['cyberpunk-dark', 'Акцентная тёмная'], ['gray', 'Серая'], ['colorful', 'Цветная'], ['classic', 'Классическая'], ['apple', 'Чистая'], ['book', 'Для чтения']];
+    workspace.innerHTML = `${setTitle('ОФОРМЛЕНИЕ', 'Выбери рабочее состояние.', 'Все темы исходного UltraWise сохранены и приведены к одной спокойной системе.')}<div class="theme-grid">${themes.map(([id, label]) => `<button class="theme-option ${document.documentElement.dataset.visTheme === id ? 'is-selected' : ''}" data-theme="${id}"><span>${escapeHTML(label)}</span><small>${id === 'book' ? 'Больше воздуха для чтения' : id.includes('dark') || id === 'oled' ? 'Тёмный режим' : 'Светлый режим'}</small></button>`).join('')}</div>`;
+  }
 
   document.addEventListener('click', async event => {
-    const target = event.target.closest('[data-view],[data-open-lecture],[data-save-lecture],[data-open-college],[data-favorite-college],[data-compare-college],[data-delete-note],[data-task],[data-delete-task],[data-quiz],[data-like-quote],[data-theme],[data-delete-admin-lecture]'); if (!target) return;
+    const target = event.target.closest('button,[data-open-lecture],[data-open-college]');
+    if (!target) return;
     if (target.dataset.view) return go(target.dataset.view);
     if (target.dataset.openLecture) return renderLecture(target.dataset.openLecture);
     if (target.dataset.openCollege) return renderCollege(target.dataset.openCollege);
-    if (target.dataset.saveLecture) { const result = await api(`/api/content/lectures/${target.dataset.saveLecture}/save`, {method:'POST'}); state.lectures = []; return renderLectures(); }
-    if (target.dataset.favoriteCollege) { await api(`/api/content/colleges/${target.dataset.favoriteCollege}/favorite`, {method:'POST'}); state.colleges=[]; return renderColleges(); }
-    if (target.dataset.compareCollege) { const id=Number(target.dataset.compareCollege);state.compare.has(id)?state.compare.delete(id):state.compare.add(id);return renderColleges(); }
-    if (target.dataset.deleteNote) { await api(`/api/content/notes/${target.dataset.deleteNote}`, {method:'DELETE'}); return renderNotes(); }
-    if (target.dataset.task) { await api(`/api/content/tasks/${target.dataset.task}`, {method:'PATCH',body:JSON.stringify({completed:target.checked})}); return; }
-    if (target.dataset.deleteTask) { await api(`/api/content/tasks/${target.dataset.deleteTask}`, {method:'DELETE'}); return renderDay(); }
-    if (target.dataset.quiz) document.getElementById('quizResult').textContent = ({tech:'Попробуй лекции по JavaScript и Python, а затем сохрани ITMO или МФТИ в избранное.',science:'Начни с физики или биологии и посмотри технические университеты.',people:'Открой экономику, языки или философию и собери личный план на день.'}[target.dataset.quiz]);
-    if (target.dataset.likeQuote !== undefined) { localStorage.setItem('uv-quote-'+target.dataset.likeQuote,'1'); return renderQuotes(); }
-    if (target.dataset.theme) { document.documentElement.dataset.visTheme=target.dataset.theme; localStorage.setItem('uv-theme',target.dataset.theme); return; }
-    if (target.dataset.deleteAdminLecture) { await api(`/api/content/admin/lectures/${target.dataset.deleteAdminLecture}`,{method:'DELETE'});state.lectures=[];return renderAdmin(); }
+    if (target.dataset.saveLecture) { await api(`/api/content/lectures/${target.dataset.saveLecture}/save`, { method: 'POST' }); state.lectures = []; return currentView() === 'lectures' ? renderLectures() : renderLecture(target.dataset.saveLecture); }
+    if (target.dataset.favoriteCollege) { await api(`/api/content/colleges/${target.dataset.favoriteCollege}/favorite`, { method: 'POST' }); state.colleges = []; return currentView() === 'colleges' ? renderColleges() : renderCollege(target.dataset.favoriteCollege); }
+    if (target.dataset.compareCollege) { const id = Number(target.dataset.compareCollege); state.compare.has(id) ? state.compare.delete(id) : state.compare.add(id); return renderColleges(); }
+    if (target.dataset.deleteNote) { await api(`/api/content/notes/${target.dataset.deleteNote}`, { method: 'DELETE' }); return renderNotes(); }
+    if (target.dataset.deleteTask) { await api(`/api/content/tasks/${target.dataset.deleteTask}`, { method: 'DELETE' }); return renderDay(); }
+    if (target.dataset.likeQuote !== undefined) { const key = `uv-quote-${target.dataset.likeQuote}`; localStorage.setItem(key, localStorage.getItem(key) === '1' ? '0' : '1'); return renderQuotes(); }
+    if (target.dataset.theme) { document.documentElement.dataset.visTheme = target.dataset.theme; localStorage.setItem('uv-theme', target.dataset.theme); return renderThemes(); }
+    if (target.dataset.deleteAdminLecture) { await api(`/api/content/admin/lectures/${target.dataset.deleteAdminLecture}`, { method: 'DELETE' }); state.lectures = []; return renderAdmin(); }
   });
-  window.addEventListener('popstate', () => render());
-  document.documentElement.dataset.visTheme=localStorage.getItem('uv-theme')||'light'; render();
+
+  document.addEventListener('change', async event => {
+    if (!event.target.dataset.task) return;
+    await api(`/api/content/tasks/${event.target.dataset.task}`, { method: 'PATCH', body: JSON.stringify({ completed: event.target.checked }) });
+  });
+  document.getElementById('logoutButton')?.addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/'; });
+  window.addEventListener('popstate', () => render(currentView()));
+  document.documentElement.dataset.visTheme = localStorage.getItem('uv-theme') || 'light';
+  render();
 })();
