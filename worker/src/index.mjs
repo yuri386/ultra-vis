@@ -127,8 +127,8 @@ async function upsertUser(profile, env) {
   return { id: inserted.meta.last_row_id, skillland_user_id: profile.id, email: profile.email, full_name: profile.fullName, nickname };
 }
 
-function isHtmlPath(pathname) {
-  return pathname === '/index.html' || pathname.endsWith('.html');
+function isProtectedPagePath(pathname) {
+  return pathname === '/dashboard' || pathname === '/dashboard.html' || pathname === '/index' || pathname === '/index.html' || (pathname.endsWith('.html') && pathname !== '/gate.html');
 }
 
 export default {
@@ -155,9 +155,12 @@ export default {
       return redirect('/', 302, { 'Set-Cookie': sessionCookie(token) });
     }
 
-    if (path === '/' && request.method === 'GET') return env.ASSETS.fetch(assetRequest(request, session ? '/index.html' : '/gate.html'));
-    if (isHtmlPath(path) && !session) return redirect('/');
-    if (isHtmlPath(path) && session) return env.ASSETS.fetch(request);
+    // Cloudflare Assets reserves index.html for /. The private page therefore
+    // has its own canonical URL, avoiding a redirect loop for signed-in users.
+    if (path === '/' && request.method === 'GET') return env.ASSETS.fetch(assetRequest(request, session ? '/dashboard' : '/gate'));
+    if (path === '/gate' && session) return redirect('/');
+    if (isProtectedPagePath(path) && !session) return redirect('/');
+    if (isProtectedPagePath(path) && session) return env.ASSETS.fetch(assetRequest(request, '/dashboard'));
     if (path.startsWith('/api/')) return Response.json({ success: false, error: 'Not found' }, { status: 404 });
     return env.ASSETS.fetch(request);
   }
