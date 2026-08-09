@@ -1,0 +1,18 @@
+name = "ultravis"
+main = "worker/src/index.mjs"
+compatibility_date = "2026-08-08"
+workers_dev = true
+
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+SKILLLAND_URL = "https://skillland-platform-yuri386.onrender.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ultravis"
+database_id = "7f94ca1c-5d38-41e6-9aab-8907dafc193b"
+migrations_dir = "migrations"
