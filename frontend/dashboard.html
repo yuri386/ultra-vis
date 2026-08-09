@@ -1,76 +1,35 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Ultra VIS &mdash; Your career, in focus</title>
+  <title>Ultra VIS &mdash; Учись и выбирай свой путь</title>
   <link rel="stylesheet" href="/css/ultravis.css">
+  <link rel="stylesheet" href="/css/ultravis-product.css">
 </head>
-<body class="app-page">
-  <header class="topbar">
-    <a class="wordmark" href="/" aria-label="Ultra VIS home"><span class="vis-mark" aria-hidden="true"></span>Ultra VIS</a>
-    <nav class="topnav" aria-label="Main navigation">
-      <a href="#vision">Vision</a>
-      <a href="#signals">Signals</a>
-      <a href="#path">Path</a>
+<body class="vis-product-page">
+  <header class="vis-header">
+    <a class="wordmark" href="/dashboard" aria-label="Ultra VIS"><span class="vis-mark" aria-hidden="true"></span>Ultra VIS</a>
+    <nav class="vis-nav" aria-label="Разделы">
+      <button data-view="home">Главная</button><button data-view="lectures">Лекции</button><button data-view="colleges">Профориентация</button><button data-view="day">Мой день</button>
     </nav>
-    <div class="profile-actions">
-      <a class="profile-link" href="https://skillland-platform-yuri386.onrender.com/profile.html">SkillLand profile</a>
-      <button class="logout-button" type="button" id="logoutButton">Sign out</button>
-    </div>
+    <div class="vis-header-actions"><button class="plain-action" data-view="profile">Профиль</button><button class="logout-button" id="logoutButton" type="button">Выйти</button></div>
   </header>
 
   <main>
-    <section class="hero-panel" id="vision">
-      <div class="hero-copy">
-        <p class="eyebrow">CAREER INTELLIGENCE, MADE PERSONAL</p>
-        <h1>Your future,<br><span>in clear view.</span></h1>
-        <p class="hero-text">Ultra VIS turns what you learn, build and care about into a practical next step &mdash; designed around you.</p>
-        <div class="hero-actions">
-          <a class="button button-light" href="#path">Explore your path <span aria-hidden="true">&rarr;</span></a>
-          <a class="text-link" href="https://skillland-platform-yuri386.onrender.com/profile.html">Open SkillLand profile <span aria-hidden="true">&nearr;</span></a>
-        </div>
+    <section class="vis-hero" id="hero">
+      <img src="/assets/images/ultravis-hero-v2.png" alt="Студент с телефоном открывает образовательный план">
+      <div class="vis-hero-copy">
+        <p class="eyebrow">УЛЬТРАВИЗУАЛЬНЫЙ ПУТЬ К ЗНАНИЯМ</p>
+        <h1>Знания. Выбор.<br><span>Твой следующий шаг.</span></h1>
+        <p>Лекции, профильные направления, заметки и ежедневные задачи &mdash; всё в одном личном пространстве.</p>
+        <div class="hero-actions"><button class="button button-light" data-view="lectures">Открыть лекции <span>&rarr;</span></button><button class="hero-text-button" data-view="colleges">Выбрать направление</button></div>
       </div>
-      <img class="hero-art" src="/assets/images/ultravis-hero-v1.png" alt="A learner exploring an abstract constellation of future opportunities">
-      <div class="hero-scrim" aria-hidden="true"></div>
     </section>
-
-    <section class="intro-section" id="signals">
-      <p class="eyebrow">ONE PROFILE. A SHARPER DIRECTION.</p>
-      <h2>Everything that makes you <span>you</span>,<br>now working together.</h2>
-      <p>Ultra VIS connects your SkillLand profile, career signal and projects to reveal momentum you can actually use.</p>
-    </section>
-
-    <section class="signal-grid" aria-label="Ultra VIS capabilities">
-      <article class="signal-card signal-card--blue">
-        <div class="card-topline"><span>01</span><span>CAREER NAVIGATOR</span></div>
-        <div class="signal-constellation" aria-hidden="true"><b></b><i></i><i></i><i></i><i></i><i></i></div>
-        <h3>Find the direction that fits.</h3>
-        <p>Explore role clusters that match your strengths, interests and real work preferences.</p>
-        <a href="#path" class="card-link">Open navigator <span>&rarr;</span></a>
-      </article>
-      <article class="signal-card signal-card--warm">
-        <div class="card-topline"><span>02</span><span>INTERACTIVE EXPERIENCE</span></div>
-        <div class="moment-card" aria-hidden="true"><span class="moment-label">YOUR NEXT SIGNAL</span><strong>Build</strong><em>A simple action can change the picture.</em><div><i></i><i></i><i></i></div></div>
-        <h3>Make progress feel visible.</h3>
-        <p>Small challenges and project moments transform exploration into proof of what you can do.</p>
-        <a href="#path" class="card-link">Start a moment <span>&rarr;</span></a>
-      </article>
-      <article class="signal-card signal-card--glass">
-        <div class="card-topline"><span>03</span><span>PERSONAL RECOMMENDATIONS</span></div>
-        <div class="recommendation-stack" aria-hidden="true"><div><small>RECOMMENDED</small><strong>Creative technology</strong><span>High alignment</span></div><div><small>NEXT EXPLORATION</small><strong>Product design</strong><span>Build a portfolio signal</span></div></div>
-        <h3>Receive a next step with context.</h3>
-        <p>Your recommendations respond to your profile, not a generic list of careers.</p>
-        <a href="https://skillland-platform-yuri386.onrender.com/profile.html" class="card-link">See profile signal <span>&nearr;</span></a>
-      </article>
-    </section>
-
-    <section class="path-panel" id="path">
-      <div class="path-copy"><p class="eyebrow">ULTRA VIS / NEXT</p><h2>Start with one honest signal.</h2><p>Update a strength, capture a project or revisit your goals on SkillLand. Ultra VIS will use it to make your next recommendation more precise.</p></div>
-      <a class="button button-primary" href="https://skillland-platform-yuri386.onrender.com/profile.html">Continue in SkillLand <span aria-hidden="true">&rarr;</span></a>
-    </section>
+    <section class="vis-workspace" id="workspace" aria-live="polite"></section>
   </main>
-  <footer class="footer"><span>&copy; 2026 SkillLand</span><span>Ultra VIS is powered by your SkillLand profile.</span></footer>
+  <footer class="footer vis-footer"><span>&copy; 2026 SkillLand</span><span>Ultra VIS &mdash; твоя образовательная траектория.</span></footer>
   <script src="/js/ultravis-app.js"></script>
+  <script src="/js/ultravis-dashboard.js"></script>
 </body>
 </html>

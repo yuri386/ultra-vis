@@ -131,6 +131,118 @@ function isProtectedPagePath(pathname) {
   return pathname === '/dashboard' || pathname === '/dashboard.html' || pathname === '/index' || pathname === '/index.html' || (pathname.endsWith('.html') && pathname !== '/gate.html');
 }
 
+const legacyProductRoutes = {
+  '/lectures.html': 'lectures',
+  '/orientation.html': 'colleges',
+  '/college-detail.html': 'colleges',
+  '/notes.html': 'notes',
+  '/myday.html': 'day',
+  '/games.html': 'games',
+  '/profile.html': 'profile',
+  '/quotes.html': 'home'
+};
+
+function apiUnauthorized() {
+  return Response.json({ success: false, error: 'Sign in via SkillLand to continue.' }, { status: 401 });
+}
+
+async function requestJson(request) {
+  try { return await request.json(); } catch { return {}; }
+}
+
+async function contentApi(request, path, session, env) {
+  if (!session) return apiUnauthorized();
+  const userId = Number(session.sub);
+  const lectureMatch = path.match(/^\/api\/content\/lectures\/(\d+)(?:\/(save))?$/);
+  const collegeMatch = path.match(/^\/api\/content\/colleges\/(\d+)(?:\/(favorite))?$/);
+
+  if (path === '/api/content/lectures' && request.method === 'GET') {
+    const rows = await env.DB.prepare('SELECT id, title, description, category, level, duration, author, image, views FROM lectures ORDER BY id').all();
+    const saved = await env.DB.prepare('SELECT lecture_id FROM saved_lectures WHERE user_id = ?').bind(userId).all();
+    const savedIds = new Set(saved.results.map(row => row.lecture_id));
+    return Response.json({ success: true, data: rows.results.map(row => ({ ...row, saved: savedIds.has(row.id) })) });
+  }
+  if (lectureMatch && !lectureMatch[2] && request.method === 'GET') {
+    const lecture = await env.DB.prepare('SELECT * FROM lectures WHERE id = ?').bind(Number(lectureMatch[1])).first();
+    if (!lecture) return Response.json({ success: false, error: 'Lecture not found.' }, { status: 404 });
+    const saved = await env.DB.prepare('SELECT 1 FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first();
+    return Response.json({ success: true, data: { ...lecture, saved: Boolean(saved) } });
+  }
+  if (lectureMatch && lectureMatch[2] === 'save' && request.method === 'POST') {
+    const lectureId = Number(lectureMatch[1]);
+    const exists = await env.DB.prepare('SELECT 1 FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lectureId).first();
+    if (exists) await env.DB.prepare('DELETE FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lectureId).run();
+    else await env.DB.prepare('INSERT OR IGNORE INTO saved_lectures (user_id, lecture_id) VALUES (?, ?)').bind(userId, lectureId).run();
+    return Response.json({ success: true, saved: !exists });
+  }
+
+  if (path === '/api/content/colleges' && request.method === 'GET') {
+    const rows = await env.DB.prepare('SELECT * FROM colleges ORDER BY rating DESC, id').all();
+    const favorites = await env.DB.prepare('SELECT college_id FROM favorite_colleges WHERE user_id = ?').bind(userId).all();
+    const favoriteIds = new Set(favorites.results.map(row => row.college_id));
+    return Response.json({ success: true, data: rows.results.map(row => ({ ...row, favorite: favoriteIds.has(row.id) })) });
+  }
+  if (collegeMatch && !collegeMatch[2] && request.method === 'GET') {
+    const college = await env.DB.prepare('SELECT * FROM colleges WHERE id = ?').bind(Number(collegeMatch[1])).first();
+    if (!college) return Response.json({ success: false, error: 'College not found.' }, { status: 404 });
+    return Response.json({ success: true, data: college });
+  }
+  if (collegeMatch && collegeMatch[2] === 'favorite' && request.method === 'POST') {
+    const collegeId = Number(collegeMatch[1]);
+    const exists = await env.DB.prepare('SELECT 1 FROM favorite_colleges WHERE user_id = ? AND college_id = ?').bind(userId, collegeId).first();
+    if (exists) await env.DB.prepare('DELETE FROM favorite_colleges WHERE user_id = ? AND college_id = ?').bind(userId, collegeId).run();
+    else await env.DB.prepare('INSERT OR IGNORE INTO favorite_colleges (user_id, college_id) VALUES (?, ?)').bind(userId, collegeId).run();
+    return Response.json({ success: true, favorite: !exists });
+  }
+
+  if (path === '/api/content/notes' && request.method === 'GET') {
+    const rows = await env.DB.prepare('SELECT id, title, body, updated_at FROM notes WHERE user_id = ? ORDER BY updated_at DESC, id DESC').bind(userId).all();
+    return Response.json({ success: true, data: rows.results });
+  }
+  if (path === '/api/content/notes' && request.method === 'POST') {
+    const body = await requestJson(request);
+    const title = String(body.title || 'Untitled note').trim().slice(0, 120) || 'Untitled note';
+    const content = String(body.body || '').trim().slice(0, 12000);
+    const result = await env.DB.prepare('INSERT INTO notes (user_id, title, body, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(userId, title, content).run();
+    return Response.json({ success: true, data: { id: result.meta.last_row_id, title, body: content } }, { status: 201 });
+  }
+  const noteMatch = path.match(/^\/api\/content\/notes\/(\d+)$/);
+  if (noteMatch && request.method === 'PATCH') {
+    const body = await requestJson(request);
+    const title = String(body.title || 'Untitled note').trim().slice(0, 120) || 'Untitled note';
+    const content = String(body.body || '').trim().slice(0, 12000);
+    await env.DB.prepare('UPDATE notes SET title = ?, body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').bind(title, content, Number(noteMatch[1]), userId).run();
+    return Response.json({ success: true });
+  }
+  if (noteMatch && request.method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?').bind(Number(noteMatch[1]), userId).run();
+    return Response.json({ success: true });
+  }
+
+  if (path === '/api/content/tasks' && request.method === 'GET') {
+    const rows = await env.DB.prepare('SELECT id, title, completed FROM daily_tasks WHERE user_id = ? ORDER BY completed, id DESC').bind(userId).all();
+    return Response.json({ success: true, data: rows.results });
+  }
+  if (path === '/api/content/tasks' && request.method === 'POST') {
+    const body = await requestJson(request);
+    const title = String(body.title || '').trim().slice(0, 160);
+    if (!title) return Response.json({ success: false, error: 'Task title is required.' }, { status: 400 });
+    const result = await env.DB.prepare('INSERT INTO daily_tasks (user_id, title) VALUES (?, ?)').bind(userId, title).run();
+    return Response.json({ success: true, data: { id: result.meta.last_row_id, title, completed: 0 } }, { status: 201 });
+  }
+  const taskMatch = path.match(/^\/api\/content\/tasks\/(\d+)$/);
+  if (taskMatch && request.method === 'PATCH') {
+    const body = await requestJson(request);
+    await env.DB.prepare('UPDATE daily_tasks SET completed = ? WHERE id = ? AND user_id = ?').bind(body.completed ? 1 : 0, Number(taskMatch[1]), userId).run();
+    return Response.json({ success: true });
+  }
+  if (taskMatch && request.method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM daily_tasks WHERE id = ? AND user_id = ?').bind(Number(taskMatch[1]), userId).run();
+    return Response.json({ success: true });
+  }
+  return Response.json({ success: false, error: 'Not found.' }, { status: 404 });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -140,6 +252,7 @@ export default {
     if (path === '/api/health') return Response.json({ ok: true, service: 'ultravis', database: 'cloudflare-d1' });
     if (path === '/api/auth/session') return session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 });
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
+    if (path.startsWith('/api/content/')) return contentApi(request, path, session, env);
 
     if (path === '/auth/skillland' && request.method === 'GET') {
       const callback = `${url.origin}/auth/skillland/callback`;
@@ -159,6 +272,7 @@ export default {
     // has its own canonical URL, avoiding a redirect loop for signed-in users.
     if (path === '/' && request.method === 'GET') return env.ASSETS.fetch(assetRequest(request, session ? '/dashboard' : '/gate'));
     if (path === '/gate' && session) return redirect('/');
+    if (legacyProductRoutes[path] && session) return redirect(`/dashboard?view=${legacyProductRoutes[path]}`);
     if (isProtectedPagePath(path) && !session) return redirect('/');
     if (isProtectedPagePath(path) && session) return env.ASSETS.fetch(assetRequest(request, '/dashboard'));
     if (path.startsWith('/api/')) return Response.json({ success: false, error: 'Not found' }, { status: 404 });
