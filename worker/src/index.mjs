@@ -153,8 +153,17 @@ async function requestJson(request) {
 async function contentApi(request, path, session, env) {
   if (!session) return apiUnauthorized();
   const userId = Number(session.sub);
+  const account = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(userId).first();
+  const isAdmin = Boolean(account?.is_admin);
   const lectureMatch = path.match(/^\/api\/content\/lectures\/(\d+)(?:\/(save))?$/);
   const collegeMatch = path.match(/^\/api\/content\/colleges\/(\d+)(?:\/(favorite))?$/);
+
+  if (path === '/api/content/admin/status' && request.method === 'GET') return Response.json({ success: true, isAdmin });
+  if (path === '/api/content/achievements' && request.method === 'GET') {
+    await env.DB.prepare("INSERT OR IGNORE INTO user_achievements (user_id, code, title, description) VALUES (?, 'welcome', 'Первый шаг', 'Ты открыл личное пространство Ultra VIS')").bind(userId).run();
+    const rows = await env.DB.prepare('SELECT code, title, description, unlocked_at FROM user_achievements WHERE user_id = ? ORDER BY unlocked_at').bind(userId).all();
+    return Response.json({ success: true, data: rows.results });
+  }
 
   if (path === '/api/content/lectures' && request.method === 'GET') {
     const rows = await env.DB.prepare('SELECT id, title, description, category, level, duration, author, image, views FROM lectures ORDER BY id').all();
@@ -193,6 +202,19 @@ async function contentApi(request, path, session, env) {
     if (exists) await env.DB.prepare('DELETE FROM favorite_colleges WHERE user_id = ? AND college_id = ?').bind(userId, collegeId).run();
     else await env.DB.prepare('INSERT OR IGNORE INTO favorite_colleges (user_id, college_id) VALUES (?, ?)').bind(userId, collegeId).run();
     return Response.json({ success: true, favorite: !exists });
+  }
+  const reviewMatch = path.match(/^\/api\/content\/colleges\/(\d+)\/reviews$/);
+  if (reviewMatch && request.method === 'GET') {
+    const rows = await env.DB.prepare('SELECT rating, body, created_at FROM college_reviews WHERE college_id = ? ORDER BY id DESC').bind(Number(reviewMatch[1])).all();
+    return Response.json({ success: true, data: rows.results });
+  }
+  if (reviewMatch && request.method === 'POST') {
+    const body = await requestJson(request);
+    const review = String(body.body || '').trim().slice(0, 1000);
+    const rating = Math.max(1, Math.min(5, Number(body.rating) || 0));
+    if (!review || !rating) return Response.json({ success: false, error: 'Добавь текст и оценку.' }, { status: 400 });
+    await env.DB.prepare('INSERT INTO college_reviews (user_id, college_id, body, rating) VALUES (?, ?, ?, ?)').bind(userId, Number(reviewMatch[1]), review, rating).run();
+    return Response.json({ success: true }, { status: 201 });
   }
 
   if (path === '/api/content/notes' && request.method === 'GET') {
@@ -239,6 +261,26 @@ async function contentApi(request, path, session, env) {
   if (taskMatch && request.method === 'DELETE') {
     await env.DB.prepare('DELETE FROM daily_tasks WHERE id = ? AND user_id = ?').bind(Number(taskMatch[1]), userId).run();
     return Response.json({ success: true });
+  }
+  const adminMatch = path.match(/^\/api\/content\/admin\/(lectures|colleges)(?:\/(\d+))?$/);
+  if (adminMatch) {
+    if (!isAdmin) return Response.json({ success: false, error: 'Админ-доступ нужен для этого действия.' }, { status: 403 });
+    const table = adminMatch[1]; const id = Number(adminMatch[2]);
+    if (request.method === 'DELETE' && id) { await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run(); return Response.json({ success:true }); }
+    if ((request.method === 'POST' || request.method === 'PUT')) {
+      const body = await requestJson(request);
+      if (table === 'lectures') {
+        const title = String(body.title || '').trim().slice(0,160); const category = String(body.category || 'Other').trim().slice(0,60);
+        if (!title) return Response.json({ success:false,error:'Укажи название.' },{status:400});
+        if (request.method === 'POST') await env.DB.prepare('INSERT INTO lectures (title,description,category,level,duration,author,content,image) VALUES (?,?,?,?,?,?,?,?)').bind(title,String(body.description||'').slice(0,700),category,'Beginner',Number(body.duration)||30,'Ultra VIS',String(body.content||'').slice(0,5000),'/assets/images/lectures/lecture-programming-v1.png').run();
+        else await env.DB.prepare('UPDATE lectures SET title=?, description=?, category=? WHERE id=?').bind(title,String(body.description||'').slice(0,700),category,id).run();
+      } else {
+        const name = String(body.name || '').trim().slice(0,160); if (!name) return Response.json({success:false,error:'Укажи название.'},{status:400});
+        if (request.method === 'POST') await env.DB.prepare('INSERT INTO colleges (name,city,type,description,specialties,rating,image) VALUES (?,?,?,?,?,?,?)').bind(name,String(body.city||'').slice(0,80),'University',String(body.description||'').slice(0,700),String(body.specialties||'').slice(0,500),4,'/assets/images/ultravis-hero-v2.png').run();
+        else await env.DB.prepare('UPDATE colleges SET name=?, city=?, description=?, specialties=? WHERE id=?').bind(name,String(body.city||'').slice(0,80),String(body.description||'').slice(0,700),String(body.specialties||'').slice(0,500),id).run();
+      }
+      return Response.json({ success:true });
+    }
   }
   return Response.json({ success: false, error: 'Not found.' }, { status: 404 });
 }
