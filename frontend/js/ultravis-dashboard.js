@@ -26,6 +26,8 @@
       if (view === 'quiz') return renderQuiz();
       if (view === 'games') return renderGames();
       if (view === 'profile') return renderProfile();
+      if (view === 'quotes') return renderQuotes();
+      if (view === 'themes') return renderThemes();
       return renderHome();
     } catch (error) {
       workspace.innerHTML = `${setTitle('ULTRA VIS', 'Не удалось открыть раздел', 'Проверь подключение и попробуй ещё раз.')}<button class="button button-primary" data-view="home">На главную</button>`;
@@ -34,7 +36,7 @@
 
   function renderHome() {
     workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Продолжай с того, что важно сегодня.', 'Весь исходный функционал UltraWise теперь собран в одной понятной оболочке.')}
-      <div class="module-grid">${card('📚','Лекции','Каталог материалов с поиском и сохранением.','lectures','Смотреть')}${card('🎓','Профориентация','Сравни учебные заведения и сохрани интересные.','colleges','Выбрать')}${card('✓','Мой день','Собери личный список задач на сегодня.','day','Планировать')}${card('✦','Тест направления','Небольшой интерактивный ориентир для старта.','quiz','Пройти')}${card('📝','Заметки','Конспекты сохраняются в твоём аккаунте.','notes','Открыть')}${card('🎮','Практика','Лёгкая игра на фокус и скорость реакции.','games','Играть')}</div>`;
+      <div class="module-grid">${card('📚','Лекции','Каталог материалов с поиском и сохранением.','lectures','Смотреть')}${card('🎓','Профориентация','Сравни учебные заведения и сохрани интересные.','colleges','Выбрать')}${card('✓','Мой день','Собери личный список задач на сегодня.','day','Планировать')}${card('✦','Тест направления','Небольшой интерактивный ориентир для старта.','quiz','Пройти')}${card('📝','Заметки','Конспекты сохраняются в твоём аккаунте.','notes','Открыть')}${card('💬','Цитаты','Сохрани мысль, к которой хочешь вернуться.','quotes','Смотреть')}${card('🎮','Практика','Лёгкая игра на фокус и скорость реакции.','games','Играть')}${card('◐','Тема','Настрой вид пространства под себя.','themes','Выбрать')}</div>`;
   }
 
   async function renderLectures() {
@@ -76,9 +78,11 @@
   function renderQuiz() { workspace.innerHTML = `${setTitle('ИНТЕРАКТИВНЫЙ ОРИЕНТИР','Что тебе интереснее сейчас?','Это не экзамен, а быстрый способ выбрать следующий раздел.')}<div class="quiz-card"><h3>Выбери задачу, от которой тебе становится интересно.</h3><div class="choice-row"><button data-quiz="tech">Создавать цифровые продукты</button><button data-quiz="science">Понимать, как устроен мир</button><button data-quiz="people">Работать с идеями и людьми</button></div><p id="quizResult"></p></div>`; }
   function renderGames() { workspace.innerHTML = `${setTitle('ПРАКТИКА','Поймай фокус','Нажми на кнопку, когда будешь готов. Счётчик покажет, как быстро ты среагировал.')}<div class="quiz-card"><button class="button button-primary" id="focusStart">Начать</button><p id="focusResult">Одна короткая игра для перезагрузки между занятиями.</p></div>`; document.getElementById('focusStart').onclick = () => { const started = performance.now(); const button = document.getElementById('focusStart'); button.textContent = 'Нажми сейчас!'; button.onclick = () => { document.getElementById('focusResult').textContent = `Твоя реакция: ${Math.round(performance.now()-started)} мс.`; button.textContent='Ещё раз'; button.onclick = null; }; }; }
   async function renderProfile() { state.session = (await api('/api/auth/session')).user; workspace.innerHTML = `${setTitle('ПРОФИЛЬ SKILLLAND','${esc(state.session.name || state.session.email)}','Этот профиль создан через SkillLand и доступен только тебе.')}<div class="profile-summary"><span class="profile-orb">${esc((state.session.name || 'S').slice(0,1))}</span><div><h3>${esc(state.session.name || 'SkillLand user')}</h3><p>${esc(state.session.email)}</p><a href="https://skillland-platform-yuri386.onrender.com/profile.html">Открыть профиль SkillLand &nearr;</a></div></div>`; }
+  function renderQuotes() { const quotes=[['"The future depends on what you do today."','Mahatma Gandhi'],['"The beautiful thing about learning is that nobody can take it away from you."','B. B. King'],['"Small steps every day become real change."','Ultra VIS']]; workspace.innerHTML=`${setTitle('ИДЕИ','Мысли, которые остаются с тобой.','Сохрани понравившуюся мысль в избранное браузера.')}<div class="notes-grid">${quotes.map((q,i)=>`<article class="note-card"><h3>${q[0]}</h3><p>${q[1]}</p><button data-like-quote="${i}">${localStorage.getItem('uv-quote-'+i)==='1'?'♥ Сохранено':'♡ Сохранить'}</button></article>`).join('')}</div>`; }
+  function renderThemes() { const themes=[['light','Светлая'],['dark','Тёмная'],['mist','Мягкая'],['contrast','Контрастная']]; workspace.innerHTML=`${setTitle('ОФОРМЛЕНИЕ','Выбери настроение.','Все основные темы UltraWise сохранены в современной оболочке.')}<div class="choice-row">${themes.map(([id,name])=>`<button data-theme="${id}">${name}</button>`).join('')}</div>`; }
 
   document.addEventListener('click', async event => {
-    const target = event.target.closest('[data-view],[data-open-lecture],[data-save-lecture],[data-open-college],[data-favorite-college],[data-delete-note],[data-task],[data-delete-task],[data-quiz]'); if (!target) return;
+    const target = event.target.closest('[data-view],[data-open-lecture],[data-save-lecture],[data-open-college],[data-favorite-college],[data-delete-note],[data-task],[data-delete-task],[data-quiz],[data-like-quote],[data-theme]'); if (!target) return;
     if (target.dataset.view) return go(target.dataset.view);
     if (target.dataset.openLecture) return renderLecture(target.dataset.openLecture);
     if (target.dataset.openCollege) return renderCollege(target.dataset.openCollege);
@@ -88,7 +92,9 @@
     if (target.dataset.task) { await api(`/api/content/tasks/${target.dataset.task}`, {method:'PATCH',body:JSON.stringify({completed:target.checked})}); return; }
     if (target.dataset.deleteTask) { await api(`/api/content/tasks/${target.dataset.deleteTask}`, {method:'DELETE'}); return renderDay(); }
     if (target.dataset.quiz) document.getElementById('quizResult').textContent = ({tech:'Попробуй лекции по JavaScript и Python, а затем сохрани ITMO или МФТИ в избранное.',science:'Начни с физики или биологии и посмотри технические университеты.',people:'Открой экономику, языки или философию и собери личный план на день.'}[target.dataset.quiz]);
+    if (target.dataset.likeQuote !== undefined) { localStorage.setItem('uv-quote-'+target.dataset.likeQuote,'1'); return renderQuotes(); }
+    if (target.dataset.theme) { document.documentElement.dataset.visTheme=target.dataset.theme; localStorage.setItem('uv-theme',target.dataset.theme); return; }
   });
   window.addEventListener('popstate', () => render());
-  render();
+  document.documentElement.dataset.visTheme=localStorage.getItem('uv-theme')||'light'; render();
 })();
