@@ -414,6 +414,14 @@ export default {
       return redirect('/', 302, { 'Set-Cookie': sessionCookie(token) });
     }
 
+    // Sessions created before the private SkillLand progress bridge existed are
+    // refreshed once through the same SSO flow. No password is requested or
+    // exposed; this simply gives the Worker its server-only mirror token.
+    if (session && (path === '/' || isProtectedPagePath(path))) {
+      const linkedUser = await env.DB.prepare('SELECT skillland_sync_token FROM users WHERE id = ?').bind(Number(session.sub)).first();
+      if (!linkedUser?.skillland_sync_token) return redirect('/auth/skillland');
+    }
+
     // Cloudflare Assets reserves index.html for /. The private page therefore
     // has its own canonical URL, avoiding a redirect loop for signed-in users.
     if (path === '/' && request.method === 'GET') return env.ASSETS.fetch(assetRequest(request, session ? '/dashboard' : '/gate'));
