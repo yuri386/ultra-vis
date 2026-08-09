@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: ultravis-yuri386
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    disk:
+      name: ultravis-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        value: https://ultravis-yuri386.onrender.com
+      - key: SKILLLAND_URL
+        value: https://skillland-platform-yuri386.onrender.com
+      - key: ULTRAVIS_DATA_DIR
+        value: /var/data
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ULTRAVIS_SSO_SECRET
+        sync: false

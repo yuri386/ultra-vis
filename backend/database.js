@@ -11,9 +11,12 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'database.db');
+const dataDir = path.resolve(process.env.ULTRAVIS_DATA_DIR || __dirname);
+fs.mkdirSync(dataDir, { recursive: true });
+const DB_PATH = path.join(dataDir, 'database.db');
 console.log('📂 Путь к БД:', DB_PATH);
 
 // Создание подключения к БД

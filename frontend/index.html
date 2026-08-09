@@ -1,326 +1,76 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UltraWise - Студенческий Портал</title>
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/global.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/themes.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ultra VIS — Your career, in focus</title>
+  <link rel="stylesheet" href="/css/ultravis.css">
 </head>
-<body>
-    <!-- Глобальная авторизация и синхронизация -->
-    <script src="/js/auth-manager.js" defer></script>
-    <script src="/js/api.js" defer></script>
-    <script src="/js/components.js" defer></script>
-    <script src="/js/animations.js" defer></script>
-    <script src="/js/theme-switcher.js" defer></script>
-    <!-- Навигация -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <span class="logo">🎓</span>
-                <span class="brand-name">UltraWise</span>
-            </div>
-            
-            <div class="nav-links">
-                <a href="#" class="nav-link active">Главная</a>
-                <a href="lectures.html" class="nav-link">Лекции</a>
-                <a href="tests.html" class="nav-link">Тесты</a>
-                <a href="notes.html" class="nav-link">Заметки</a>
-            </div>
-            
-            <div class="nav-actions">
-                <div class="user-info" id="userInfo" style="display: none;">
-                    <span class="balance">💎 <span id="userBalance">0</span></span>
-                    <div class="user-avatar" id="userAvatar">
-                        <span id="userInitials">U</span>
-                    </div>
-                </div>
-                <button class="btn-primary" id="loginBtn">Войти</button>
-            </div>
-        </div>
+<body class="app-page">
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="Ultra VIS home"><span class="vis-mark" aria-hidden="true"></span>Ultra VIS</a>
+    <nav class="topnav" aria-label="Main navigation">
+      <a href="#vision">Vision</a>
+      <a href="#signals">Signals</a>
+      <a href="#path">Path</a>
     </nav>
-
-    <!-- Герой секция -->
-    <section class="hero">
-        <div class="hero-background"></div>
-        <div class="hero-content">
-            <h1 class="hero-title fade-in">
-                Твой путь к <span class="gradient-text">успеху</span>
-            </h1>
-            <p class="hero-subtitle fade-in delay-1">
-                Обучайся, развивайся и открывай новые возможности вместе с UltraWise
-            </p>
-            <div class="hero-buttons fade-in delay-2">
-                <a href="#features" class="btn-primary btn-large">Начать обучение</a>
-                <a href="#orientation" class="btn-secondary btn-large">Проф-ориентация</a>
-            </div>
-        </div>
-        <div class="hero-decoration">
-            <div class="floating-card card-1">
-                <span class="card-icon">📚</span>
-                <span class="card-text">1000+ лекций</span>
-            </div>
-            <div class="floating-card card-2">
-                <span class="card-icon">🎯</span>
-                <span class="card-text">50+ колледжей</span>
-            </div>
-            <div class="floating-card card-3">
-                <span class="card-icon">⭐</span>
-                <span class="card-text">10k+ студентов</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- Быстрые действия -->
-    <section class="quick-actions" id="features">
-        <div class="container">
-            <h2 class="section-title">Что ты хочешь сделать?</h2>
-            
-            <div class="actions-grid">
-                <div class="action-card" onclick="location.href='lectures.html'">
-                    <div class="card-icon-wrapper">
-                        <span class="card-icon-large">📖</span>
-                    </div>
-                    <h3 class="card-title">Лекции</h3>
-                    <p class="card-description">Изучай материалы по всем предметам</p>
-                    <div class="card-shine"></div>
-                </div>
-
-                <div class="action-card" onclick="location.href='tests.html'">
-                    <div class="card-icon-wrapper">
-                        <span class="card-icon-large">✅</span>
-                    </div>
-                    <h3 class="card-title">Тесты</h3>
-                    <p class="card-description">Проверь свои знания</p>
-                    <div class="card-shine"></div>
-                </div>
-
-                <div class="action-card" onclick="location.href='notes.html'">
-                    <div class="card-icon-wrapper">
-                        <span class="card-icon-large">📝</span>
-                    </div>
-                    <h3 class="card-title">Заметки</h3>
-                    <p class="card-description">Веди конспекты онлайн</p>
-                    <div class="card-shine"></div>
-                </div>
-
-                <div class="action-card" onclick="location.href='games.html'">
-                    <div class="card-icon-wrapper">
-                        <span class="card-icon-large">🎮</span>
-                    </div>
-                    <h3 class="card-title">Игры</h3>
-                    <p class="card-description">Учись через развлечения</p>
-                    <div class="card-shine"></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Проф-ориентация (большая кнопка) -->
-    <section class="orientation-banner" id="orientation">
-        <div class="container">
-            <div class="banner-content">
-                <div class="banner-text">
-                    <h2 class="banner-title">🎓 Проф-ориентация</h2>
-                    <p class="banner-description">
-                        Выбери свой колледж или ВУЗ! Смотри реальные уроки, фото и отзывы студентов.
-                    </p>
-                </div>
-                <button class="btn-huge" onclick="location.href='orientation.html'">
-                    <span class="btn-text">Выбрать учебное заведение</span>
-                    <span class="btn-arrow">→</span>
-                </button>
-            </div>
-            <div class="banner-decoration">
-                <img src="assets/images/123.png" alt="Студенты" class="decoration-image">
-            </div>
-        </div>
-    </section>
-
-    <!-- Статистика -->
-    <section class="stats">
-        <div class="container">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-number count-up" data-target="1247">0</span>
-                    <span class="stat-label">Лекций</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number count-up" data-target="52">0</span>
-                    <span class="stat-label">Колледжей</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number count-up" data-target="10340">0</span>
-                    <span class="stat-label">Студентов</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number count-up" data-target="98">0</span>
-                    <span class="stat-label">% довольных</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Футер -->
-    <footer class="footer">
-        <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <span class="modal-close">&times;</span>
-            <h2 class="modal-title">Вход в аккаунт</h2>
-            <form id="loginForm" class="auth-form">
-                <div class="form-group">
-                    <label>Логин</label>
-                    <input type="text" id="loginUsername" required class="form-input">
-                </div>
-                <div class="form-group">
-                    <label>Пароль</label>
-                    <input type="password" id="loginPassword" required class="form-input">
-                </div>
-                <button type="submit" class="btn-primary btn-block">Войти</button>
-            </form>
-            <p class="auth-switch">Нет аккаунта? <a href="#" id="toRegister">Зарегистрироваться</a></p>
-        </div>
+    <div class="profile-actions">
+      <a class="profile-link" href="https://skillland-platform-yuri386.onrender.com/profile.html">SkillLand profile</a>
+      <button class="logout-button" type="button" id="logoutButton">Sign out</button>
     </div>
+  </header>
 
-    <div class="modal" id="registerModal">
-        <div class="modal-content modal-large">
-            <span class="modal-close">&times;</span>
-            <h2 class="modal-title">Регистрация</h2>
-            <form id="registerForm" class="auth-form">
-                <div class="form-row">
-                    <div class="form-group"><label>Имя</label><input type="text" id="regFirstName" required class="form-input"></div>
-                    <div class="form-group"><label>Фамилия</label><input type="text" id="regLastName" required class="form-input"></div>
-                </div>
-                <div class="form-group">
-                    <label>Логин</label><input type="text" id="regNickname" required class="form-input">
-                </div>
-                <div class="form-group">
-                    <label>Email</label><input type="email" id="regEmail" required class="form-input">
-                </div>
-                <div class="form-group">
-                    <label>Пароль</label><input type="password" id="regPassword" required class="form-input">
-                </div>
-                <button type="submit" class="btn-primary btn-block">Создать аккаунт</button>
-            </form>
+  <main>
+    <section class="hero-panel" id="vision">
+      <div class="hero-copy">
+        <p class="eyebrow">CAREER INTELLIGENCE, MADE PERSONAL</p>
+        <h1>Your future,<br><span>in clear view.</span></h1>
+        <p class="hero-text">Ultra VIS turns what you learn, build and care about into a practical next step — designed around you.</p>
+        <div class="hero-actions">
+          <a class="button button-light" href="#path">Explore your path <span aria-hidden="true">→</span></a>
+          <a class="text-link" href="https://skillland-platform-yuri386.onrender.com/profile.html">Open SkillLand profile <span aria-hidden="true">↗</span></a>
         </div>
-    </div>
+      </div>
+      <img class="hero-art" src="/assets/images/ultravis-hero-v1.png" alt="A learner exploring an abstract constellation of future opportunities">
+      <div class="hero-scrim" aria-hidden="true"></div>
+    </section>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const loginBtn = document.getElementById('loginBtn');
-        const loginModal = document.getElementById('loginModal');
-        const regModal = document.getElementById('registerModal');
-        const toReg = document.getElementById('toRegister');
+    <section class="intro-section" id="signals">
+      <p class="eyebrow">ONE PROFILE. A SHARPER DIRECTION.</p>
+      <h2>Everything that makes you <span>you</span>,<br>now working together.</h2>
+      <p>Ultra VIS connects your SkillLand profile, career signal and projects to reveal momentum you can actually use.</p>
+    </section>
 
-        // 1. ОТКРЫТИЕ МОДАЛОК
-        if (loginBtn) {
-            loginBtn.onclick = () => loginModal.classList.add('active');
-        }
-        if (toReg) {
-            toReg.onclick = (e) => {
-                e.preventDefault();
-                loginModal.classList.remove('active');
-                regModal.classList.add('active');
-            }
-        }
+    <section class="signal-grid" aria-label="Ultra VIS capabilities">
+      <article class="signal-card signal-card--blue">
+        <div class="card-topline"><span>01</span><span>CAREER NAVIGATOR</span></div>
+        <div class="signal-constellation" aria-hidden="true"><b></b><i></i><i></i><i></i><i></i><i></i></div>
+        <h3>Find the direction that fits.</h3>
+        <p>Explore role clusters that match your strengths, interests and real work preferences.</p>
+        <a href="#path" class="card-link">Open navigator <span>→</span></a>
+      </article>
+      <article class="signal-card signal-card--warm">
+        <div class="card-topline"><span>02</span><span>INTERACTIVE EXPERIENCE</span></div>
+        <div class="moment-card" aria-hidden="true"><span class="moment-label">YOUR NEXT SIGNAL</span><strong>Build</strong><em>A simple action can change the picture.</em><div><i></i><i></i><i></i></div></div>
+        <h3>Make progress feel visible.</h3>
+        <p>Small challenges and project moments transform exploration into proof of what you can do.</p>
+        <a href="#path" class="card-link">Start a moment <span>→</span></a>
+      </article>
+      <article class="signal-card signal-card--glass">
+        <div class="card-topline"><span>03</span><span>PERSONAL RECOMMENDATIONS</span></div>
+        <div class="recommendation-stack" aria-hidden="true"><div><small>RECOMMENDED</small><strong>Creative technology</strong><span>High alignment</span></div><div><small>NEXT EXPLORATION</small><strong>Product design</strong><span>Build a portfolio signal</span></div></div>
+        <h3>Receive a next step with context.</h3>
+        <p>Your recommendations respond to your profile, not a generic list of careers.</p>
+        <a href="https://skillland-platform-yuri386.onrender.com/profile.html" class="card-link">See profile signal <span>↗</span></a>
+      </article>
+    </section>
 
-        function updateNavbar() {
-        const token = localStorage.getItem('ultrawise_auth_token');
-        const loginBtn = document.getElementById('loginBtn');
-        const userInfo = document.getElementById('userInfo');
-        const userInitials = document.getElementById('userInitials');
-
-        if (token && userInfo && loginBtn) {
-            loginBtn.style.display = 'none';
-            userInfo.style.display = 'flex';
-            // Если сохранял имя в localStorage, можно вытащить первую букву
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            userInitials.textContent = user.firstName ? user.firstName[0] : 'U';
-        }
-    }
-
-updateNavbar(); // Вызываем при загрузке
-        // 2. ЗАКРЫТИЕ (Крестик и фон)
-        document.querySelectorAll('.modal-close').forEach(btn => {
-            btn.onclick = () => btn.closest('.modal').classList.remove('active');
-        });
-        window.onclick = (e) => {
-            if (e.target.classList.contains('modal')) e.target.classList.remove('active');
-        };
-
-        // 3. ОБРАБОТКА ВХОДА
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const nickname = document.getElementById('loginUsername').value;
-                const password = document.getElementById('loginPassword').value;
-
-                // Вызываем наш исправленный api.js
-                const result = await window.api.post('/auth/login', { nickname, password });
-                
-                if (result.success) {
-                    localStorage.setItem('ultrawise_auth_token', result.data.token);
-                    alert('Успешный вход!');
-                    location.reload(); 
-                } else {
-                    alert('Ошибка: ' + result.error);
-                }
-            };
-        }
-
-        // 4. ОБРАБОТКА РЕГИСТРАЦИИ (Улучшенная версия)
-        const regForm = document.getElementById('registerForm');
-        if (regForm) {
-            regForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const userData = {
-                    firstName: document.getElementById('regFirstName').value,
-                    lastName: document.getElementById('regLastName').value,
-                    nickname: document.getElementById('regNickname').value,
-                    email: document.getElementById('regEmail').value,
-                    password: document.getElementById('regPassword').value,
-                    userType: document.getElementById('regUserType').value || 'schoolkid'
-                };
-
-                const result = await window.api.post('/auth/register', userData);
-                
-                if (result.success) {
-                    // ВАЖНО: После регистрации сервер обычно сразу присылает токен
-                    if (result.data.token) {
-                        localStorage.setItem('ultrawise_auth_token', result.data.token);
-                        localStorage.setItem('user', JSON.stringify(result.data.user || result.data));
-                        alert('Регистрация успешна! Входим в аккаунт...');
-                        window.location.href = 'index.html'; // Редирект, чтобы UI обновился
-                    } else {
-                        alert('Регистрация прошла, теперь войдите под своим логином');
-                        regModal.classList.remove('active');
-                        loginModal.classList.add('active');
-                    }
-                } else {
-                    alert('Ошибка регистрации: ' + result.error);
-                }
-            };
-        }
-        const userAvatar = document.getElementById('userAvatar');
-        if (userAvatar) {
-            userAvatar.style.cursor = 'pointer'; // Чтобы было видно, что можно нажать
-            userAvatar.onclick = () => {
-                if (confirm('Выйти из аккаунта?')) {
-                    localStorage.removeItem('ultrawise_auth_token');
-                    localStorage.removeItem('user');
-                    location.reload(); // Страница обновится и кнопка "Войти" вернется
-                }
-            };
-        }
-    });
-
-
-
-    
-    </script>
+    <section class="path-panel" id="path">
+      <div class="path-copy"><p class="eyebrow">ULTRA VIS / NEXT</p><h2>Start with one honest signal.</h2><p>Update a strength, capture a project or revisit your goals on SkillLand. Ultra VIS will use it to make your next recommendation more precise.</p></div>
+      <a class="button button-primary" href="https://skillland-platform-yuri386.onrender.com/profile.html">Continue in SkillLand <span aria-hidden="true">→</span></a>
+    </section>
+  </main>
+  <footer class="footer"><span>© 2026 SkillLand</span><span>Ultra VIS is powered by your SkillLand profile.</span></footer>
+  <script src="/js/ultravis-app.js"></script>
 </body>
+</html>
