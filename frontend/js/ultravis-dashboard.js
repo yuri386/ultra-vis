@@ -3,7 +3,7 @@
   const hero = document.getElementById('hero');
   const phoneStory = document.getElementById('ultraPhoneStory');
   const skillLandUrl = 'https://skillland-platform-yuri386.onrender.com';
-  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, compare: new Set(), storageScope: 'uv:guest' };
+  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, home: null, compare: new Set(), storageScope: 'uv:guest' };
   const escapeHTML = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const api = async (url, options = {}) => {
     const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -21,6 +21,8 @@
     document.documentElement.dataset.visTheme = localStorage.getItem(accountStorageKey('theme')) || 'dark';
   }
   const go = view => { history.pushState({}, '', `/dashboard?view=${view}`); render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const openLecture = (id, block = '') => { history.pushState({}, '', `/dashboard?view=lectures&lecture=${id}${block ? `&block=${encodeURIComponent(block)}` : ''}`); renderLecture(id, block); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const openReview = id => { history.pushState({}, '', `/dashboard?view=review&review=${id}`); renderReview(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const setTitle = (eyebrow, title, text) => `<div class="section-heading"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p>${text}</p></div>`;
   const empty = text => `<p class="empty-copy">${escapeHTML(text)}</p>`;
   const progressLabel = value => value >= 100 ? 'Завершено' : value > 0 ? `${value}% изучено` : 'Новая лекция';
@@ -35,7 +37,7 @@
     workspace.className = `vis-workspace view-${view}`;
     try {
       if (view === 'home') return renderHome();
-      if (view === 'lectures') { const lectureId = new URLSearchParams(location.search).get('lecture'); return lectureId ? renderLecture(lectureId) : renderLectures(); }
+      if (view === 'lectures') { const params = new URLSearchParams(location.search); const lectureId = params.get('lecture'); return lectureId ? renderLecture(lectureId, params.get('block') || '') : renderLectures(); }
       if (view === 'colleges') { const collegeId = new URLSearchParams(location.search).get('college'); return collegeId ? renderCollege(collegeId) : renderColleges(); }
       if (view === 'notes') return renderNotes();
       if (view === 'day') return renderDay();
@@ -45,6 +47,7 @@
       if (view === 'admin') return renderAdmin();
       if (view === 'quotes') return renderQuotes();
       if (view === 'themes') return renderThemes();
+      if (view === 'review') return renderReview(new URLSearchParams(location.search).get('review'));
       return renderHome();
     } catch (error) {
       workspace.innerHTML = `${setTitle('ULTRA VIS', 'Раздел временно недоступен', error.message)}<button class="button button-primary" data-view="home">На главную</button>`;
@@ -56,13 +59,25 @@
     return state.learning;
   }
 
+  async function getHome() {
+    state.home = (await api('/api/content/home')).data;
+    return state.home;
+  }
+
   async function renderHome() {
-    const learning = await getLearning();
-    const current = learning.current;
-    const continueBlock = current
-      ? `<button class="continue-panel" data-open-lecture="${current.id}"><span>Продолжить</span><strong>${escapeHTML(current.title)}</strong><small>${current.progress}% изучено · ${escapeHTML(current.category)}</small><b>Открыть лекцию</b></button>`
-      : `<button class="continue-panel continue-panel-start" data-view="lectures"><span>Твоя траектория</span><strong>Начни с первой лекции</strong><small>Выбирай направление, сохраняй главное и возвращайся в удобный момент.</small><b>Открыть библиотеку</b></button>`;
-    workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Учёба, которая ведёт к следующему шагу.', 'Твой прогресс и выбранное направление остаются в профиле SkillLand.')}<section class="learning-overview"><div><span>Освоено</span><strong>${learning.completed} из ${learning.total}</strong><small>лекций завершено</small></div><div><span>В работе</span><strong>${learning.started}</strong><small>материалов открыто</small></div><div><span>Темп</span><strong>${learning.completion_rate}%</strong><small>общий прогресс</small></div></section>${continueBlock}`;
+    const [home, sessionData] = await Promise.all([getHome(), state.session ? Promise.resolve({ user: state.session }) : api('/api/auth/session')]);
+    state.session = sessionData.user;
+    const name = String(state.session?.name || state.session?.email || 'друг').split(/\s|@/)[0];
+    const action = home.next_action;
+    const actionButton = action.type === 'review'
+      ? `<button class="button button-primary" data-open-review="${action.review_id}">Начать</button>`
+      : `<button class="button button-primary" data-open-lecture="${action.lecture_id}" data-open-block="${escapeHTML(action.block_key || '')}">Продолжить</button>`;
+    const today = home.today.length
+      ? home.today.map(item => `<button class="home-row" data-open-review="${item.review_id}"><span>${escapeHTML(item.title)}</span><small>${item.estimated_minutes} мин</small></button>`).join('')
+      : `<button class="home-row" data-open-lecture="${action.lecture_id}" data-open-block="${escapeHTML(action.block_key || '')}"><span>Проверить себя</span><small>2 мин</small></button>`;
+    const path = home.goal.items.map(item => `<button class="path-row" data-open-lecture="${item.concept_id === 'javascript.async.await' ? 11 : 3}" data-open-block="${item.concept_id === 'javascript.async.await' ? 'intro' : ''}"><span>${escapeHTML(item.title)}</span><small>${item.mastery ? `${item.mastery}%` : 'впереди'}</small></button>`).join('');
+    workspace.innerHTML = `<section class="ultra-learning-home"><p class="home-greeting">Добрый день, ${escapeHTML(name)}</p><section class="home-focus"><p>Продолжить</p><h2>${escapeHTML(action.title)}</h2><div class="home-meta"><span>${action.estimated_minutes} мин</span><span>${escapeHTML(action.reason)}</span></div>${actionButton}</section><section class="home-list"><p>Сегодня</p>${today}</section><section class="home-list home-path"><div class="home-list-head"><p>Твой путь</p><small>${home.goal.progress}%</small></div><h3>${escapeHTML(home.goal.title)}</h3><form class="goal-line" id="goalForm"><input name="title" value="${escapeHTML(home.goal.title)}" aria-label="Учебная цель"><button>Обновить цель</button></form>${path}</section><section class="home-knowledge"><p>Знания</p><div><span>Сильные</span><b>${escapeHTML(home.knowledge.strong.join(' · ') || 'Появятся после практики')}</b></div><div><span>Сейчас</span><b>${escapeHTML(home.knowledge.developing)}</b></div><div><span>Внимание</span><b>${escapeHTML(home.knowledge.attention)}</b></div></section></section>`;
+    document.getElementById('goalForm')?.addEventListener('submit', async event => { event.preventDefault(); const title = new FormData(event.target).get('title'); await api('/api/content/goals', { method: 'POST', body: JSON.stringify({ title }) }); state.home = null; renderHome(); });
   }
 
   async function renderLectures() {
@@ -83,25 +98,47 @@
     draw(state.lectures);
   }
 
-  function lectureBlocks(content) {
-    return String(content || '').split(/\n\s*\n/).filter(Boolean).map(block => {
-      const [heading, ...copy] = block.split('\n');
-      return `<section class="lecture-reading-block"><h3>${escapeHTML(heading)}</h3>${copy.map(line => `<p>${escapeHTML(line)}</p>`).join('')}</section>`;
-    }).join('');
+  function lineBreaks(text) { return escapeHTML(text || '').split('\n').map(line => `<p>${line}</p>`).join(''); }
+
+  function blockButton(item, block, label = 'Дальше') {
+    return `<button class="story-next" data-complete-block="${item.id}" data-block-key="${escapeHTML(block.block_key)}">${label}<span>↘</span></button>`;
   }
 
-  async function renderLecture(id) {
+  function learningBlockMarkup(item, block) {
+    const payload = block.payload || {};
+    const heading = block.title ? `<h3>${escapeHTML(block.title)}</h3>` : '';
+    const copy = block.body ? `<div class="story-copy">${lineBreaks(block.body)}</div>` : '';
+    if (block.type === 'code') {
+      return `<section class="learning-block learning-code" id="block-${escapeHTML(block.block_key)}">${heading}${copy}<textarea class="lesson-code-editor" data-code-block="${escapeHTML(block.block_key)}" spellcheck="false">${escapeHTML(payload.code || '')}</textarea><div class="code-actions"><button data-run-code="${escapeHTML(block.block_key)}">Запустить</button><button data-lesson-ai="${escapeHTML(block.block_key)}" data-ai-prompt="Объясни этот код проще и по шагам">Объяснить</button></div><pre class="code-output" data-code-output="${escapeHTML(block.block_key)}" aria-live="polite"></pre>${blockButton(item, block)}</section>`;
+    }
+    if (block.type === 'interactive') {
+      const steps = Array.isArray(payload.steps) ? payload.steps : [];
+      return `<section class="learning-block learning-interactive" id="block-${escapeHTML(block.block_key)}">${heading}${copy}<ol class="story-steps">${steps.map((step, index) => `<li><b>${String(index + 1).padStart(2, '0')}</b><span>${escapeHTML(step)}</span></li>`).join('')}</ol>${blockButton(item, block, 'Понял ход мысли')}</section>`;
+    }
+    if (block.type === 'question') {
+      const answers = Array.isArray(payload.answers) ? payload.answers : [];
+      return `<section class="learning-block learning-question" id="block-${escapeHTML(block.block_key)}">${heading}${copy}<div class="question-choices" data-question="${escapeHTML(block.block_key)}">${answers.map((answer, index) => `<button data-answer-block="${item.id}" data-block-key="${escapeHTML(block.block_key)}" data-answer-index="${index}">${escapeHTML(answer)}</button>`).join('')}</div><p class="block-feedback" data-block-feedback="${escapeHTML(block.block_key)}" aria-live="polite"></p></section>`;
+    }
+    if (block.type === 'practice') {
+      return `<section class="learning-block learning-practice" id="block-${escapeHTML(block.block_key)}">${heading}${copy}<textarea class="practice-input" data-practice-input="${escapeHTML(block.block_key)}" placeholder="Напиши свой вариант — коротко и по существу"></textarea><div class="practice-actions"><button class="story-next" data-practice-block="${item.id}" data-block-key="${escapeHTML(block.block_key)}">Отправить на проверку <span>↘</span></button><button class="text-action" data-lesson-ai="${escapeHTML(block.block_key)}" data-ai-prompt="Помоги начать практику, но не давай готовый ответ">Нужна подсказка</button></div><p class="block-feedback" data-block-feedback="${escapeHTML(block.block_key)}" aria-live="polite"></p></section>`;
+    }
+    const accent = block.type === 'key_idea' ? ' learning-key-idea' : block.type === 'summary' ? ' learning-summary' : '';
+    return `<section class="learning-block${accent}" id="block-${escapeHTML(block.block_key)}">${heading}${copy}${blockButton(item, block, block.type === 'summary' ? 'Завершить материал' : 'Продолжить')}</section>`;
+  }
+
+  async function renderLecture(id, requestedBlock = '') {
     const item = (await api(`/api/content/lectures/${id}`)).data;
-    workspace.innerHTML = `<button class="back-link" data-view="lectures">← Все лекции</button><article class="lesson-detail lesson-detail-hero"><img src="${escapeHTML(item.image)}" alt=""><div><span>${escapeHTML(item.category)} · ${escapeHTML(item.level)}</span><h2>${escapeHTML(item.title)}</h2><p>${escapeHTML(item.description)}</p><p class="muted">${item.duration} минут · ${escapeHTML(item.author)}</p><div class="lesson-actions"><button class="button button-primary" data-save-lecture="${item.id}">${item.saved ? 'Убрать из сохранённых' : 'Сохранить лекцию'}</button><span class="progress-state ${progressState(item.progress)}">${progressLabel(item.progress)}</span></div></div></article><section class="reading-layout"><article class="lesson-reading">${lectureBlocks(item.content)}</article><aside class="learning-side"><p class="eyebrow">ТВОЙ ПРОГРЕСС</p><strong id="progressValue">${item.progress}%</strong><input id="lectureProgress" type="range" min="0" max="100" value="${item.progress}" aria-label="Прогресс лекции"><p>Отметь, где остановился. При 100% лекция попадёт в достижения и обновит профиль SkillLand.</p><button class="button button-primary" id="saveProgress">Сохранить прогресс</button><button class="quiet-button" id="completeLecture">Завершить лекцию</button><p class="progress-feedback" id="progressFeedback"></p></aside></section>`;
-    const range = document.getElementById('lectureProgress');
-    range.addEventListener('input', () => { document.getElementById('progressValue').textContent = `${range.value}%`; });
-    const save = async value => {
-      const result = await api(`/api/content/lectures/${item.id}/progress`, { method: 'POST', body: JSON.stringify({ progress: value }) });
-      state.lectures = [];
-      document.getElementById('progressFeedback').textContent = result.completed ? 'Лекция завершена. Результат отправлен в твой профиль SkillLand.' : 'Место сохранено. Ты сможешь вернуться сюда в любой момент.';
-    };
-    document.getElementById('saveProgress').addEventListener('click', () => save(range.value));
-    document.getElementById('completeLecture').addEventListener('click', () => { range.value = 100; document.getElementById('progressValue').textContent = '100%'; save(100); });
+    const blocks = item.blocks?.length ? item.blocks : [{ block_key: 'reading', type: 'text', title: '', body: item.content, payload: {} }];
+    workspace.innerHTML = `<article class="learning-reading"><button class="back-link" data-view="lectures">← Лекции</button><header class="learning-header"><p>${escapeHTML(item.category)} · ${escapeHTML(item.level)}</p><h2>${escapeHTML(item.title)}</h2><div><span>${item.duration} мин</span><span>${Math.round(item.progress)}% пройдено</span><button class="text-action" data-save-lecture="${item.id}">${item.saved ? 'Сохранено' : 'Сохранить'}</button></div></header><div class="learning-note">Прогресс — это место, где ты остановился. Понимание появляется только после проверки и практики.</div><article class="learning-story">${blocks.map(block => learningBlockMarkup(item, block)).join('')}</article></article>`;
+    const target = requestedBlock || item.session?.current_block_key;
+    if (target) setTimeout(() => document.getElementById(`block-${target}`)?.scrollIntoView({ behavior: requestedBlock ? 'smooth' : 'auto', block: 'start' }), 60);
+  }
+
+  async function renderReview(id) {
+    const reviews = (await api('/api/content/reviews/today')).data;
+    const review = reviews.find(item => Number(item.id) === Number(id)) || reviews[0];
+    if (!review) return go('home');
+    workspace.innerHTML = `<section class="clean-review"><button class="back-link" data-view="home">← Назад</button><p>Повторение</p><h2>Вспоминаешь<br>${escapeHTML(review.name)}?</h2><span>Скажи честно — так путь останется точным.</span><div><button data-submit-review="${review.id}" data-remembered="true">Помню уверенно</button><button data-submit-review="${review.id}" data-remembered="false">Нужно освежить</button></div></section>`;
   }
 
   async function renderColleges() {
@@ -204,8 +241,51 @@
     const target = event.target.closest('button,[data-open-lecture],[data-open-college]');
     if (!target) return;
     if (target.dataset.view) return go(target.dataset.view);
-    if (target.dataset.openLecture) return renderLecture(target.dataset.openLecture);
+    if (target.dataset.openLecture) return openLecture(target.dataset.openLecture, target.dataset.openBlock || '');
+    if (target.dataset.openReview) return openReview(target.dataset.openReview);
     if (target.dataset.openCollege) return renderCollege(target.dataset.openCollege);
+    if (target.dataset.completeBlock) {
+      await api(`/api/content/lectures/${target.dataset.completeBlock}/blocks/${target.dataset.blockKey}/complete`, { method: 'POST', body: JSON.stringify({}) });
+      state.home = null; state.learning = null;
+      const next = target.closest('.learning-block')?.nextElementSibling;
+      if (next) return next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return renderLecture(target.dataset.completeBlock);
+    }
+    if (target.dataset.answerBlock) {
+      const result = await api(`/api/content/lectures/${target.dataset.answerBlock}/blocks/${target.dataset.blockKey}/answer`, { method: 'POST', body: JSON.stringify({ answer: Number(target.dataset.answerIndex) }) });
+      const feedback = document.querySelector(`[data-block-feedback="${CSS.escape(target.dataset.blockKey)}"]`);
+      target.closest('.question-choices')?.querySelectorAll('button').forEach(button => button.disabled = true);
+      target.classList.add(result.data.correct ? 'is-correct' : 'is-incorrect');
+      if (feedback) feedback.textContent = result.data.correct ? 'Верно. Этот шаг укрепил понимание.' : 'Почти. Вернись к объяснению и попробуй применить идею в практике.';
+      state.home = null; state.learning = null;
+      return;
+    }
+    if (target.dataset.practiceBlock) {
+      const key = target.dataset.blockKey;
+      const answer = document.querySelector(`[data-practice-input="${CSS.escape(key)}"]`)?.value || '';
+      const feedback = document.querySelector(`[data-block-feedback="${CSS.escape(key)}"]`);
+      try {
+        await api(`/api/content/lectures/${target.dataset.practiceBlock}/blocks/${key}/practice`, { method: 'POST', body: JSON.stringify({ answer }) });
+        if (feedback) feedback.textContent = 'Практика сохранена. Это добавило доказательство к твоему пониманию.';
+        state.home = null; state.learning = null;
+      } catch (error) { if (feedback) feedback.textContent = error.message; }
+      return;
+    }
+    if (target.dataset.submitReview) {
+      await api(`/api/content/reviews/${target.dataset.submitReview}/answer`, { method: 'POST', body: JSON.stringify({ remembered: target.dataset.remembered === 'true' }) });
+      state.home = null; state.learning = null; return go('home');
+    }
+    if (target.dataset.runCode) {
+      const key = target.dataset.runCode;
+      const code = document.querySelector(`[data-code-block="${CSS.escape(key)}"]`)?.value || '';
+      const output = document.querySelector(`[data-code-output="${CSS.escape(key)}"]`);
+      if (output) output.textContent = /console\.log\(['"]([^'"]+)/.test(code) ? code.match(/console\.log\(['"]([^'"]+)/)?.[1] || 'Готово.' : 'Код подготовлен. Проверь логику шага и объясни её своими словами.';
+      return;
+    }
+    if (target.dataset.lessonAi) {
+      document.dispatchEvent(new CustomEvent('ultra-vis-ai-request', { detail: { message: target.dataset.aiPrompt || 'Объясни этот шаг проще.', context: { lecture_id: new URLSearchParams(location.search).get('lecture'), block_key: target.dataset.lessonAi } } }));
+      return;
+    }
     if (target.dataset.saveLecture) { await api(`/api/content/lectures/${target.dataset.saveLecture}/save`, { method: 'POST' }); state.lectures = []; return currentView() === 'lectures' ? renderLectures() : renderLecture(target.dataset.saveLecture); }
     if (target.dataset.favoriteCollege) { await api(`/api/content/colleges/${target.dataset.favoriteCollege}/favorite`, { method: 'POST' }); state.colleges = []; return currentView() === 'colleges' ? renderColleges() : renderCollege(target.dataset.favoriteCollege); }
     if (target.dataset.compareCollege) { const id = Number(target.dataset.compareCollege); state.compare.has(id) ? state.compare.delete(id) : state.compare.add(id); return renderColleges(); }
@@ -255,23 +335,28 @@
       messages.appendChild(message); messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }); return message;
     };
     const thinking = () => { const item = document.createElement('div'); item.className = 'ultra-ai-thinking'; item.innerHTML = '<i></i><span>Ultra VIS AI обрабатывает запрос</span>'; messages.appendChild(item); messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }); return item; };
+    const sendMessage = async (message, context = {}) => {
+      if (!message) return input.focus();
+      expand(); document.body.classList.add('ultra-ai-chat-open'); append('user', message); input.value = ''; send.disabled = true; const loader = thinking();
+      try {
+        const result = await api('/api/assistant', { method: 'POST', body: JSON.stringify({ message, context }) });
+        loader.remove(); append('assistant', result.reply, result);
+      } catch (error) { loader.remove(); append('assistant', error.message || 'Не удалось выполнить запрос. Попробуй ещё раз.'); }
+      finally { send.disabled = false; input.focus(); }
+    };
 
     toggle.addEventListener('click', () => dock.classList.contains('is-expanded') && !input.value ? collapse() : expand());
     form.addEventListener('submit', async event => {
       event.preventDefault();
       if (!dock.classList.contains('is-expanded')) return expand();
-      const message = input.value.trim(); if (!message) return input.focus();
-      document.body.classList.add('ultra-ai-chat-open'); append('user', message); input.value = ''; send.disabled = true; const loader = thinking();
-      try {
-        const result = await api('/api/assistant', { method: 'POST', body: JSON.stringify({ message }) });
-        loader.remove(); append('assistant', result.reply, result);
-      } catch (error) { loader.remove(); append('assistant', error.message || 'Не удалось выполнить запрос. Попробуй ещё раз.'); }
-      finally { send.disabled = false; input.focus(); }
+      return sendMessage(input.value.trim());
     });
+    document.addEventListener('ultra-vis-ai-request', event => sendMessage(event.detail?.message || '', event.detail?.context || {}));
     close.addEventListener('click', closeChat); backdrop.addEventListener('click', closeChat);
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && document.body.classList.contains('ultra-ai-chat-open')) closeChat(); });
   }
 
+  setupUltraAi();
   document.getElementById('logoutButton')?.addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/'; });
   window.addEventListener('popstate', () => render(currentView()));
   window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });

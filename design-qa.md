@@ -1,44 +1,45 @@
-# Ultra VIS — gallery and Worker QA
+# Ultra VIS learning MVP — visual QA
 
 ## Comparison target
 
-- Source visual truth: `C:\Users\sapun\AppData\Local\Temp\codex-clipboard-bd2e6074-fd57-4b0d-95e9-1de1c4f96f38.png`
-- Source dimensions: 265 × 58 px.
-- Implemented browser capture: `qa-mobile-gallery-implementation.png`
-- Focused comparison: `qa-mobile-gallery-comparison.png` — source control on top, live implementation crop beneath it.
-- Implementation viewport: 390 × 844 CSS px, device scale factor 1; captured implementation: 390 × 844 px.
-- State: signed-in dashboard, first gallery slide selected, automatic motion enabled.
+- **Source visual truth:** `C:\Users\sapun\AppData\Local\Temp\codex-clipboard-d4fdef40-7b7e-45dd-ba95-e84f4ae0713e.png` — supplied Ultra VIS dark product visual: near-black surface, restrained white typography, a small luminous AI accent and no card-grid UI.
+- **Implementation:** `C:\Users\sapun\Downloads\UltraWise v2\UltraWise v2\qa-lecture-intro-final.png` — browser-rendered published lecture at `https://ultravis.ultravis-yuri386.workers.dev/dashboard?view=lectures&lecture=11&block=intro&v=final2`.
+- **Comparison evidence:** `C:\Users\sapun\Downloads\UltraWise v2\UltraWise v2\qa-comparison-learning-final.png` — source and implementation placed side-by-side in one image and inspected together.
+- **Viewport / normalization:** implementation browser viewport capture is 1265 × 712 CSS pixels at density 1; source is 355 × 457 pixels. They intentionally represent different responsive states (phone product reference versus desktop lecture), so the comparison is qualitative on the shared visual language, not pixel-for-pixel geometry.
+- **State:** signed-in account; lecture 11; first semantic block. The resume route also tested returning to the saved block.
 
 ## Findings
 
-- No actionable P0/P1/P2 findings remain.
-- [P1, fixed] The previous mobile control used a count and thin progress lines instead of the supplied pill-shaped selector.
-  - Fix: replaced the count with a 192 × 58 px dark pill, three direct slide buttons, and a 58 × 58 px pause control. The active slide expands to a white horizontal capsule.
-  - Post-fix evidence: `qa-mobile-gallery-comparison.png` compares the supplied 265 × 58 px control with the rendered control at the same focused size.
-- [P1, fixed] The gallery used generated study photographs rather than the three supplied Ultra VIS interfaces.
-  - Fix: gallery now uses the supplied lecture, AI composer, and goals screens as source images. Their original 521 × 567, 903 × 113, and 1010 × 307 px dimensions are preserved with `object-fit: contain`; no crop is applied.
+No actionable P0, P1, or P2 visual mismatches remain for the requested direction.
 
-## Required fidelity surfaces
+- **Fonts and typography:** The implementation keeps the reference’s restrained, light-weight, high-contrast sans hierarchy. Large lesson question, reading copy, and small controls are legible without returning to boxed dashboard typography.
+- **Spacing and layout rhythm:** The desktop reading column has deliberate wide margins, single-column flow, quiet separators, and enough room between concepts. It is intentionally broader than the phone source to serve long lecture reading.
+- **Colors and visual tokens:** Both views use a near-black base, warm-white text, soft gray secondary copy, thin low-contrast lines, and the existing luminous AI accent. The desktop avoids additional accent colors except for answer feedback.
+- **Image quality and asset fidelity:** No source imagery was stretched, cropped, or replaced by generated placeholders. The existing Ultra VIS logo/AI treatment remains an actual supplied raster asset; the lecture surface does not require an unrelated image.
+- **Copy and content:** The reading copy is concise and task-oriented: explain, try, check, continue. It avoids decorative section labels and large rectangular modules.
 
-| Surface | Result | Evidence |
-| --- | --- | --- |
-| Fonts and typography | Passed | The control contains no extra labels or counter; only the compact pause mark shown in the source direction remains. Gallery copy stays below the image in the existing Ultra VIS text style. |
-| Spacing and layout rhythm | Passed | Mobile control measures 192 × 58 px plus a 58 × 58 px pause control with a 14 px gap, matching the supplied compact two-part composition. |
-| Colours and tokens | Passed | The slider uses the reference’s near-black casing, muted white dots, and bright white active capsule/pause mark against the Ultra VIS black canvas. |
-| Image quality and assets | Passed | The three user-supplied UI images are used directly at their natural raster resolution. The browser reports no horizontal overflow at 390 px. |
-| Copy and content | Passed | The three captions identify the exact visible functions: lectures, Ultra VIS AI, and personal goals. |
+## Comparison history
 
-## Interaction and production checks
+1. **[P1] Contextual AI action did not open from a lesson.**
+   - Evidence: initial published interaction left `body` without `ultra-ai-chat-open` after selecting “Объяснить”.
+   - Fix: initialized the dashboard AI controller and removed the duplicate dashboard AI script that competed for the same form.
+   - Post-fix evidence: the published page adds `ultra-ai-chat-open`; the contextual reply begins with “В блоке «Один живой пример»”.
 
-1. At 390 px the gallery is a single-slide carousel; the selector was visible and measured in the live production page.
-2. Automatic change was observed after four seconds (`translateX` moved from the first slide to a later slide).
-3. The pause control was clicked, held the slide unchanged for more than four seconds, then resumed with the reference pause mark restored.
-4. Each direct slide selector remains clickable and transitions with a 1.05 s easing curve.
-5. The Worker now defers SkillLand progress mirroring with `waitUntil`, avoiding a slow external sync on the visible lecture/quiz response path. Lecture and saved-item reads run in parallel; every account API response is private/no-store and varies by cookie.
-6. `node --check`, `git diff --check`, Wrangler dry-run, production deployment, and final browser console check passed with no console errors.
+2. **Final visual pass.**
+   - Evidence: `qa-comparison-learning-final.png` and `qa-lecture-intro-final.png`.
+   - Result: no P0/P1/P2 issues found. The fixed AI bubble is intentional and matches the user’s requested persistent AI affordance.
+
+## Primary interactions tested
+
+- Home renders a single next action, today list, goal path and knowledge status with no unavailable-section error.
+- A lecture resumes from the saved semantic block.
+- Next-block completion updates the saved position.
+- Correct check answer displays feedback and records evidence.
+- Practice response saves and displays confirmation.
+- The in-lecture AI action opens the chat and receives the current lecture/block context.
 
 ## Follow-up polish
 
-- None required for this iteration.
+- [P3] On very narrow screens, allow the fixed AI bubble to sit slightly farther from the text baseline if a long display headline wraps into the lower viewport.
 
 final result: passed

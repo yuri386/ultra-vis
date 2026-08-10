@@ -195,9 +195,13 @@ async function learningSnapshot(userId, env) {
       COUNT(lp.lecture_id) AS started,
       SUM(CASE WHEN lp.progress >= 100 THEN 1 ELSE 0 END) AS completed
       FROM lecture_progress lp WHERE lp.user_id = ?`).bind(userId).first(),
-    env.DB.prepare(`SELECT l.id, l.title, l.category, lp.progress, lp.last_opened_at
-      FROM lecture_progress lp JOIN lectures l ON l.id = lp.lecture_id
-      WHERE lp.user_id = ? ORDER BY lp.last_opened_at DESC LIMIT 1`).bind(userId).first(),
+    env.DB.prepare(`SELECT l.id, l.title, l.category, COALESCE(s.progress_percent, lp.progress, 0) AS progress,
+      COALESCE(s.last_activity_at, lp.last_opened_at) AS last_opened_at
+      FROM lectures l
+      LEFT JOIN learning_sessions s ON s.lecture_id = l.id AND s.user_id = ?
+      LEFT JOIN lecture_progress lp ON lp.lecture_id = l.id AND lp.user_id = ?
+      WHERE s.user_id IS NOT NULL OR lp.user_id IS NOT NULL
+      ORDER BY COALESCE(s.last_activity_at, lp.last_opened_at) DESC LIMIT 1`).bind(userId, userId).first(),
     env.DB.prepare(`SELECT primary_direction, secondary_direction, summary, created_at
       FROM quiz_results WHERE user_id = ? ORDER BY id DESC LIMIT 1`).bind(userId).first()
   ]);
@@ -212,6 +216,144 @@ async function learningSnapshot(userId, env) {
     current: current ? { id: current.id, title: current.title, category: current.category, progress: Number(current.progress || 0), last_opened_at: current.last_opened_at } : null,
     quiz: quiz || null
   };
+}
+
+function parseJson(value, fallback = {}) {
+  try { return JSON.parse(String(value || '')); } catch { return fallback; }
+}
+
+function safeConceptIds(value) {
+  const parsed = parseJson(value, []);
+  return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string' && item.length <= 120) : [];
+}
+
+async function recordLearningEvent(userId, env, eventType, { lectureId = null, blockKey = null, conceptId = null, metadata = {} } = {}) {
+  const allowed = new Set(['lecture_started', 'block_completed', 'note_created', 'ai_question_asked', 'hint_requested', 'question_answered', 'practice_started', 'practice_submitted', 'lecture_completed', 'review_completed']);
+  if (!allowed.has(eventType)) return;
+  await env.DB.prepare('INSERT INTO learning_events (user_id, event_type, lecture_id, block_key, concept_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(userId, eventType, lectureId, blockKey, conceptId, JSON.stringify(metadata || {})).run();
+}
+
+function masteryStatus(mastery, confidence) {
+  if (confidence >= 85 && mastery >= 75) return 'strong';
+  if (confidence >= 60 && mastery >= 55) return 'verified';
+  if (mastery >= 45) return 'practicing';
+  if (mastery > 0) return 'learning';
+  return 'new';
+}
+
+async function refreshConceptMastery(userId, conceptId, env) {
+  const rows = await env.DB.prepare('SELECT score, weight, assistance_level, evidence_type, created_at FROM knowledge_evidence WHERE user_id = ? AND concept_id = ? ORDER BY created_at DESC LIMIT 24').bind(userId, conceptId).all();
+  const evidence = rows.results || [];
+  const weighted = evidence.reduce((sum, item) => sum + Number(item.score) * Number(item.weight) * (1 - Number(item.assistance_level || 0)), 0);
+  const totalWeight = evidence.reduce((sum, item) => sum + Number(item.weight), 0);
+  const mastery = totalWeight ? Math.round((weighted / totalWeight) * 100) : 0;
+  const kinds = new Set(evidence.map(item => item.evidence_type));
+  const practiceBonus = kinds.has('practice') ? 18 : 0;
+  const reviewBonus = kinds.has('review') ? 14 : 0;
+  const confidence = Math.min(100, Math.round(evidence.length * 14 + kinds.size * 9 + practiceBonus + reviewBonus));
+  const status = masteryStatus(mastery, confidence);
+  const reviewDays = confidence >= 85 ? 14 : confidence >= 60 ? 7 : 2;
+  await env.DB.prepare(`INSERT INTO user_concept_mastery (user_id, concept_id, mastery_score, confidence_score, evidence_count, last_practiced_at, last_verified_at, next_review_at, status, updated_at)
+    VALUES (?, ?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP, datetime('now', ?), ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id, concept_id) DO UPDATE SET mastery_score = excluded.mastery_score, confidence_score = excluded.confidence_score, evidence_count = excluded.evidence_count,
+    last_practiced_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE user_concept_mastery.last_practiced_at END, last_verified_at = CURRENT_TIMESTAMP,
+    next_review_at = excluded.next_review_at, status = excluded.status, updated_at = CURRENT_TIMESTAMP`)
+    .bind(userId, conceptId, mastery, confidence, evidence.length, kinds.has('practice') ? 1 : 0, `+${reviewDays} days`, status, kinds.has('practice') ? 1 : 0).run();
+  if (evidence.length) {
+    const due = await env.DB.prepare("SELECT id FROM reviews WHERE user_id = ? AND concept_id = ? AND status = 'due' LIMIT 1").bind(userId, conceptId).first();
+    if (!due) await env.DB.prepare("INSERT INTO reviews (user_id, concept_id, due_at) VALUES (?, ?, datetime('now', ?))").bind(userId, conceptId, `+${reviewDays} days`).run();
+  }
+  return { mastery, confidence, evidence_count: evidence.length, status };
+}
+
+async function addEvidence(userId, env, { conceptIds = [], evidenceType, sourceId = '', score = .7, weight = .25, assistanceLevel = 0 }) {
+  const unique = [...new Set(conceptIds)].slice(0, 8);
+  if (!unique.length) return [];
+  for (const conceptId of unique) {
+    await env.DB.prepare('INSERT INTO knowledge_evidence (user_id, concept_id, evidence_type, source_id, score, weight, assistance_level) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(userId, conceptId, evidenceType, sourceId, score, weight, assistanceLevel).run();
+  }
+  return Promise.all(unique.map(conceptId => refreshConceptMastery(userId, conceptId, env)));
+}
+
+async function ensureLearningPath(userId, env) {
+  await env.DB.prepare("INSERT OR IGNORE INTO goals (user_id, title, goal_type, target_id, status) VALUES (?, 'Frontend Developer', 'career', 'frontend', 'active')").bind(userId).run();
+  const goal = await env.DB.prepare("SELECT * FROM goals WHERE user_id = ? AND status = 'active' ORDER BY id LIMIT 1").bind(userId).first();
+  await env.DB.prepare('INSERT OR IGNORE INTO learning_paths (user_id, goal_id, title) VALUES (?, ?, ?)').bind(userId, goal.id, goal.title).run();
+  const path = await env.DB.prepare('SELECT * FROM learning_paths WHERE user_id = ? AND goal_id = ?').bind(userId, goal.id).first();
+  const pathItems = [
+    ['html', 'HTML', 1], ['css', 'CSS', 2], ['javascript', 'JavaScript Fundamentals', 3],
+    ['javascript.dom', 'DOM и события', 4], ['javascript.promises', 'Promises', 5],
+    ['javascript.async.await', 'Async JavaScript', 6]
+  ];
+  await env.DB.batch(pathItems.map(([conceptId, title, position]) => env.DB.prepare('INSERT OR IGNORE INTO learning_path_items (path_id, concept_id, title, position) VALUES (?, ?, ?, ?)').bind(path.id, conceptId, title, position)));
+  return { goal, path };
+}
+
+async function learningHome(userId, env) {
+  const [snapshot, pathModel, masteryRows, reviewRows] = await Promise.all([
+    learningSnapshot(userId, env),
+    ensureLearningPath(userId, env),
+    env.DB.prepare('SELECT m.*, c.name FROM user_concept_mastery m JOIN concepts c ON c.id = m.concept_id WHERE m.user_id = ? ORDER BY m.updated_at DESC').bind(userId).all(),
+    env.DB.prepare("SELECT r.id, r.concept_id, c.name FROM reviews r JOIN concepts c ON c.id = r.concept_id WHERE r.user_id = ? AND r.status = 'due' AND datetime(r.due_at) <= datetime('now') ORDER BY r.due_at LIMIT 2").bind(userId).all()
+  ]);
+  const mastery = masteryRows.results || [];
+  const reviews = reviewRows.results || [];
+  const pathItems = await env.DB.prepare(`SELECT i.concept_id, i.title, i.position, COALESCE(m.mastery_score, 0) AS mastery, COALESCE(m.confidence_score, 0) AS confidence, COALESCE(m.status, 'new') AS status
+    FROM learning_path_items i LEFT JOIN user_concept_mastery m ON m.user_id = ? AND m.concept_id = i.concept_id WHERE i.path_id = ? ORDER BY i.position`).bind(userId, pathModel.path.id).all();
+  const current = snapshot.current;
+  const review = reviews[0] || null;
+  const weak = mastery.filter(item => item.mastery_score > 0 && item.mastery_score < 60).sort((a, b) => a.mastery_score - b.mastery_score)[0] || null;
+  const nextAction = review
+    ? { type: 'review', title: `Повторить ${review.name}`, estimated_minutes: 3, reason: 'Короткая проверка закрепит знание.', review_id: review.id, concept_id: review.concept_id }
+    : weak?.concept_id === 'javascript.promises'
+      ? { type: 'lecture', title: 'Быстро повторить Promises', estimated_minutes: 4, reason: 'Это поможет продолжить Async/Await.', lecture_id: 11, block_key: 'promise' }
+      : current
+        ? { type: 'continue', title: current.title, estimated_minutes: Math.max(2, Math.round((100 - current.progress) / 10)), reason: 'Продолжи с того смыслового блока, где остановился.', lecture_id: current.id }
+        : { type: 'lecture', title: 'Начать Async/Await', estimated_minutes: 18, reason: 'Один короткий материал с примером и практикой.', lecture_id: 11, block_key: 'intro' };
+  const strong = mastery.filter(item => item.mastery_score >= 75 && item.confidence_score >= 60).slice(0, 3).map(item => item.name);
+  const attention = weak ? weak.name : 'Promises';
+  const development = snapshot.current?.title || 'Async JavaScript';
+  const goalProgress = pathItems.results.length ? Math.round(pathItems.results.reduce((sum, item) => sum + item.mastery, 0) / pathItems.results.length) : 0;
+  await env.DB.prepare('UPDATE goals SET progress = ? WHERE id = ?').bind(goalProgress, pathModel.goal.id).run();
+  return {
+    continue_learning: current,
+    next_action: nextAction,
+    today: reviews.map(item => ({ type: 'review', title: `Повторить ${item.name}`, estimated_minutes: 3, review_id: item.id })),
+    goal: { title: pathModel.goal.title, progress: goalProgress, items: pathItems.results || [] },
+    knowledge: { strong, developing: development, attention },
+    metrics: { progress: snapshot.completion_rate, completed: snapshot.completed, active: snapshot.started }
+  };
+}
+
+async function startLearningSession(userId, lectureId, env) {
+  const firstBlock = await env.DB.prepare('SELECT block_key, position FROM lecture_blocks WHERE lecture_id = ? ORDER BY position LIMIT 1').bind(lectureId).first();
+  await env.DB.prepare(`INSERT INTO learning_sessions (user_id, lecture_id, current_block_key, current_position, status)
+    VALUES (?, ?, ?, ?, 'active') ON CONFLICT(user_id, lecture_id) DO UPDATE SET status = CASE WHEN learning_sessions.status = 'completed' THEN 'active' ELSE learning_sessions.status END, last_activity_at = CURRENT_TIMESTAMP`)
+    .bind(userId, lectureId, firstBlock?.block_key || null, firstBlock?.position || 1).run();
+  const session = await env.DB.prepare('SELECT * FROM learning_sessions WHERE user_id = ? AND lecture_id = ?').bind(userId, lectureId).first();
+  const started = await env.DB.prepare("SELECT id FROM learning_events WHERE user_id = ? AND lecture_id = ? AND event_type = 'lecture_started' LIMIT 1").bind(userId, lectureId).first();
+  if (!started) await recordLearningEvent(userId, env, 'lecture_started', { lectureId });
+  return session;
+}
+
+async function completeLearningBlock(userId, lectureId, blockKey, env) {
+  const block = await env.DB.prepare('SELECT * FROM lecture_blocks WHERE lecture_id = ? AND block_key = ?').bind(lectureId, blockKey).first();
+  if (!block) return null;
+  const prior = await env.DB.prepare("SELECT id FROM learning_events WHERE user_id = ? AND lecture_id = ? AND block_key = ? AND event_type = 'block_completed' LIMIT 1").bind(userId, lectureId, blockKey).first();
+  if (!prior) await recordLearningEvent(userId, env, 'block_completed', { lectureId, blockKey });
+  const totals = await env.DB.prepare("SELECT (SELECT COUNT(*) FROM lecture_blocks WHERE lecture_id = ?) AS total, COUNT(DISTINCT block_key) AS completed FROM learning_events WHERE user_id = ? AND lecture_id = ? AND event_type = 'block_completed'").bind(lectureId, userId, lectureId).first();
+  const progress = totals?.total ? Math.round((Number(totals.completed || 0) / Number(totals.total)) * 100) : 0;
+  const next = await env.DB.prepare('SELECT block_key, position FROM lecture_blocks WHERE lecture_id = ? AND position > ? ORDER BY position LIMIT 1').bind(lectureId, block.position).first();
+  const completed = progress >= 100;
+  await env.DB.prepare(`UPDATE learning_sessions SET current_block_key = ?, current_position = ?, progress_percent = ?, interaction_count = interaction_count + 1, status = ?, last_activity_at = CURRENT_TIMESTAMP, finished_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END WHERE user_id = ? AND lecture_id = ?`)
+    .bind(next?.block_key || blockKey, next?.position || block.position, progress, completed ? 'completed' : 'active', completed ? 1 : 0, userId, lectureId).run();
+  await env.DB.prepare(`INSERT INTO lecture_progress (user_id, lecture_id, progress, completed_at, last_opened_at, updated_at) VALUES (?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id, lecture_id) DO UPDATE SET progress = MAX(lecture_progress.progress, excluded.progress), completed_at = CASE WHEN excluded.progress >= 100 THEN CURRENT_TIMESTAMP ELSE lecture_progress.completed_at END, last_opened_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`)
+    .bind(userId, lectureId, progress, completed ? 1 : 0).run();
+  if (completed) await recordLearningEvent(userId, env, 'lecture_completed', { lectureId });
+  return { block, next, progress, completed };
 }
 
 async function mirrorLearningToSkillLand(userId, env) {
@@ -273,6 +415,13 @@ async function ultraVisAssistant(request, session, env) {
   if (!message) return Response.json({ success: false, error: 'Напиши запрос для Ultra VIS AI.' }, { status: 400 });
   const userId = Number(session.sub);
   const lower = message.toLowerCase();
+  const context = body.context && typeof body.context === 'object' ? body.context : {};
+  const lectureId = Number(context.lecture_id || 0);
+  const blockKey = String(context.block_key || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 72);
+  if (lectureId && blockKey) await recordLearningEvent(userId, env, 'ai_question_asked', { lectureId, blockKey, metadata: { messageLength: message.length } });
+  const contextualPrompt = lectureId && blockKey
+    ? `Контекст Ultra VIS: пользователь читает лекцию ${lectureId}, блок ${blockKey}. Объясняй коротко, не выдавай готовый ответ за него и предложи следующий самостоятельный шаг.\n\n`
+    : '';
 
   const directView = [
     [/(открой|покажи|перейди).{0,35}(заметк|конспект)/, 'notes', 'Открываю личную библиотеку заметок.'],
@@ -284,6 +433,16 @@ async function ultraVisAssistant(request, session, env) {
   ].find(([pattern]) => pattern.test(lower));
   if (directView) {
     return Response.json({ success: true, reply: directView[2], action: { view: directView[1], label: 'Открыть' } });
+  }
+
+  if (lectureId && blockKey && /(объясн|не понял|проще|подсказ|почему|как работает)/.test(lower)) {
+    const contextBlock = await env.DB.prepare('SELECT title, body FROM lecture_blocks WHERE lecture_id = ? AND block_key = ?').bind(lectureId, blockKey).first();
+    if (contextBlock) {
+      return Response.json({
+        success: true,
+        reply: `В блоке «${contextBlock.title}» держи одну опору: ${assistantShortText(contextBlock.body, 280)}\n\nСвоими словами ответь на два вопроса: что здесь появляется первым и что должно произойти после этого? Так ты поймёшь идею, а не просто запомнишь фразу.`
+      });
+    }
   }
 
   if (/(всё.*связан|все.*связан|всё.*профил|все.*профил|что.*есть)/.test(lower)) {
@@ -337,7 +496,7 @@ async function ultraVisAssistant(request, session, env) {
   try {
     const response = await fetchWithTimeout(`${env.SKILLLAND_URL.replace(/\/$/, '')}/api/ai/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ message, conversation_key: `ultravis-${userId}` })
+      body: JSON.stringify({ message: `${contextualPrompt}${message}`, conversation_key: `ultravis-${userId}` })
     }, 8000);
     const result = await response.json().catch(() => ({}));
     if (response.ok && result.reply) return Response.json({ success: true, reply: String(result.reply).slice(0, 2400) });
@@ -353,6 +512,8 @@ async function contentApi(request, path, session, env, executionContext) {
   const accountForUser = () => env.DB.prepare('SELECT is_admin, skillland_role, skillland_headline FROM users WHERE id = ?').bind(userId).first();
   const lectureMatch = path.match(/^\/api\/content\/lectures\/(\d+)(?:\/(save))?$/);
   const lectureProgressMatch = path.match(/^\/api\/content\/lectures\/(\d+)\/progress$/);
+  const learningBlockMatch = path.match(/^\/api\/content\/lectures\/(\d+)\/blocks\/([a-z0-9_-]+)\/(complete|answer|practice)$/i);
+  const reviewActionMatch = path.match(/^\/api\/content\/reviews\/(\d+)\/answer$/);
   const collegeMatch = path.match(/^\/api\/content\/colleges\/(\d+)(?:\/(favorite))?$/);
 
   if (path === '/api/content/admin/status' && request.method === 'GET') {
@@ -368,6 +529,45 @@ async function contentApi(request, path, session, env, executionContext) {
     const [snapshot, account] = await Promise.all([learningSnapshot(userId, env), accountForUser()]);
     return Response.json({ success: true, data: { ...snapshot, role: account?.skillland_role || 'student', headline: account?.skillland_headline || '' } });
   }
+  if (path === '/api/content/home' && request.method === 'GET') {
+    return Response.json({ success: true, data: await learningHome(userId, env) });
+  }
+  if (path === '/api/content/skills' && request.method === 'GET') {
+    const { goal, path } = await ensureLearningPath(userId, env);
+    const [items, knowledge] = await Promise.all([
+      env.DB.prepare(`SELECT i.title, i.concept_id, i.position, COALESCE(m.mastery_score, 0) AS mastery, COALESCE(m.confidence_score, 0) AS confidence, COALESCE(m.status, 'new') AS status
+        FROM learning_path_items i LEFT JOIN user_concept_mastery m ON m.user_id = ? AND m.concept_id = i.concept_id WHERE i.path_id = ? ORDER BY i.position`).bind(userId, path.id).all(),
+      env.DB.prepare('SELECT m.*, c.name FROM user_concept_mastery m JOIN concepts c ON c.id = m.concept_id WHERE m.user_id = ? ORDER BY m.mastery_score DESC').bind(userId).all()
+    ]);
+    return Response.json({ success: true, data: { goal, path: items.results || [], knowledge: knowledge.results || [] } });
+  }
+  if (path === '/api/content/reviews/today' && request.method === 'GET') {
+    const rows = await env.DB.prepare("SELECT r.id, r.concept_id, r.due_at, c.name FROM reviews r JOIN concepts c ON c.id = r.concept_id WHERE r.user_id = ? AND r.status = 'due' AND datetime(r.due_at) <= datetime('now') ORDER BY r.due_at LIMIT 4").bind(userId).all();
+    return Response.json({ success: true, data: rows.results || [] });
+  }
+  if (reviewActionMatch && request.method === 'POST') {
+    const review = await env.DB.prepare("SELECT * FROM reviews WHERE id = ? AND user_id = ? AND status = 'due'").bind(Number(reviewActionMatch[1]), userId).first();
+    if (!review) return Response.json({ success: false, error: 'Повторение уже завершено.' }, { status: 404 });
+    const body = await requestJson(request);
+    const score = body.remembered === false ? .25 : .9;
+    await addEvidence(userId, env, { conceptIds: [review.concept_id], evidenceType: 'review', sourceId: `review-${review.id}`, score, weight: .6 });
+    await env.DB.prepare("UPDATE reviews SET status = 'completed', last_score = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?").bind(score, review.id, userId).run();
+    await recordLearningEvent(userId, env, 'review_completed', { conceptId: review.concept_id, metadata: { score } });
+    return Response.json({ success: true, data: await refreshConceptMastery(userId, review.concept_id, env) });
+  }
+  if (path === '/api/content/goals' && request.method === 'POST') {
+    const body = await requestJson(request);
+    const title = String(body.title || '').trim().slice(0, 120);
+    if (!title) return Response.json({ success: false, error: 'Напиши цель.' }, { status: 400 });
+    const current = await env.DB.prepare("SELECT * FROM goals WHERE user_id = ? AND status = 'active' ORDER BY id LIMIT 1").bind(userId).first();
+    if (current) {
+      await env.DB.prepare('UPDATE goals SET title = ? WHERE id = ? AND user_id = ?').bind(title, current.id, userId).run();
+      await env.DB.prepare('UPDATE learning_paths SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND goal_id = ?').bind(title, userId, current.id).run();
+      return Response.json({ success: true, data: { id: current.id, title } });
+    }
+    const result = await env.DB.prepare("INSERT INTO goals (user_id, title, goal_type, target_id, status) VALUES (?, ?, 'career', 'frontend', 'active')").bind(userId, title).run();
+    return Response.json({ success: true, data: { id: result.meta.last_row_id, title } }, { status: 201 });
+  }
 
   if (path === '/api/content/lectures' && request.method === 'GET') {
     const [rows, saved] = await Promise.all([
@@ -379,16 +579,50 @@ async function contentApi(request, path, session, env, executionContext) {
     const savedIds = new Set(saved.results.map(row => row.lecture_id));
     return Response.json({ success: true, data: rows.results.map(row => ({ ...row, progress: Number(row.progress || 0), completed: Number(row.progress || 0) >= 100, saved: savedIds.has(row.id) })) });
   }
+  if (learningBlockMatch && request.method === 'POST') {
+    const lectureId = Number(learningBlockMatch[1]);
+    const blockKey = learningBlockMatch[2];
+    const action = learningBlockMatch[3];
+    const block = await env.DB.prepare('SELECT * FROM lecture_blocks WHERE lecture_id = ? AND block_key = ?').bind(lectureId, blockKey).first();
+    if (!block) return Response.json({ success: false, error: 'Блок не найден.' }, { status: 404 });
+    const concepts = safeConceptIds(block.concept_ids_json);
+    const body = await requestJson(request);
+    let result = { correct: null, mastery: [] };
+    if (action === 'answer') {
+      const payload = parseJson(block.payload_json, {});
+      const correct = Number(body.answer) === Number(payload.correct);
+      result = { correct, mastery: await addEvidence(userId, env, { conceptIds: concepts, evidenceType: 'question', sourceId: `${lectureId}:${blockKey}`, score: correct ? 1 : .2, weight: .25, assistanceLevel: Number(body.assistance_level || 0) }) };
+      await recordLearningEvent(userId, env, 'question_answered', { lectureId, blockKey, metadata: { correct } });
+    }
+    if (action === 'practice') {
+      const answer = String(body.answer || '').trim().slice(0, 4000);
+      if (!answer) return Response.json({ success: false, error: 'Добавь свой вариант.' }, { status: 400 });
+      const assistance = Math.max(0, Math.min(1, Number(body.assistance_level || 0)));
+      result = { correct: true, mastery: await addEvidence(userId, env, { conceptIds: concepts, evidenceType: 'practice', sourceId: `${lectureId}:${blockKey}`, score: .78, weight: .85, assistanceLevel: assistance }) };
+      await recordLearningEvent(userId, env, 'practice_submitted', { lectureId, blockKey, metadata: { assistance } });
+    }
+    const completion = await completeLearningBlock(userId, lectureId, blockKey, env);
+    deferLearningMirror(userId, env, executionContext);
+    return Response.json({ success: true, data: { ...result, completion } });
+  }
   if (lectureMatch && !lectureMatch[2] && request.method === 'GET') {
     const lecture = await env.DB.prepare('SELECT * FROM lectures WHERE id = ?').bind(Number(lectureMatch[1])).first();
     if (!lecture) return Response.json({ success: false, error: 'Lecture not found.' }, { status: 404 });
-    await env.DB.prepare(`INSERT INTO lecture_progress (user_id, lecture_id, progress, last_opened_at, updated_at)
-      VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT(user_id, lecture_id) DO UPDATE SET last_opened_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).bind(userId, lecture.id).run();
-    const saved = await env.DB.prepare('SELECT 1 FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first();
-    const progress = await env.DB.prepare('SELECT progress, completed_at FROM lecture_progress WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first();
+    const session = await startLearningSession(userId, lecture.id, env);
+    const [saved, progress, blocks] = await Promise.all([
+      env.DB.prepare('SELECT 1 FROM saved_lectures WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first(),
+      env.DB.prepare('SELECT progress, completed_at FROM lecture_progress WHERE user_id = ? AND lecture_id = ?').bind(userId, lecture.id).first(),
+      env.DB.prepare('SELECT block_key, position, type, title, body, payload_json, concept_ids_json, estimated_minutes FROM lecture_blocks WHERE lecture_id = ? ORDER BY position').bind(lecture.id).all()
+    ]);
     deferLearningMirror(userId, env, executionContext);
-    return Response.json({ success: true, data: { ...lecture, saved: Boolean(saved), progress: Number(progress?.progress || 0), completed: Number(progress?.progress || 0) >= 100 } });
+    return Response.json({ success: true, data: {
+      ...lecture,
+      saved: Boolean(saved),
+      progress: Number(session?.progress_percent ?? progress?.progress ?? 0),
+      completed: session?.status === 'completed' || Number(progress?.progress || 0) >= 100,
+      session: session ? { current_block_key: session.current_block_key, current_position: session.current_position, status: session.status } : null,
+      blocks: (blocks.results || []).map(block => ({ ...block, payload: parseJson(block.payload_json, {}), concept_ids: safeConceptIds(block.concept_ids_json) }))
+    } });
   }
   if (lectureMatch && lectureMatch[2] === 'save' && request.method === 'POST') {
     const lectureId = Number(lectureMatch[1]);
