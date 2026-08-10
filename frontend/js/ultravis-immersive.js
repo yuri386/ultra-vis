@@ -7,7 +7,6 @@
   const toggle = document.getElementById('ultraAiToggle');
   const gallery = document.getElementById('ultraFeatureGallery');
   const galleryTrack = document.getElementById('ultraGalleryTrack');
-  const galleryCount = document.getElementById('ultraGalleryCount');
   const galleryPause = document.getElementById('ultraGalleryPause');
   const galleryDots = [...document.querySelectorAll('[data-gallery-index]')];
   if (!story || !visual || !copies.length || !dock) return;
@@ -53,7 +52,7 @@
     if (dock.classList.contains('is-expanded')) input?.focus();
   });
 
-  if (gallery && galleryTrack && galleryCount && galleryPause && galleryDots.length) {
+  if (gallery && galleryTrack && galleryPause && galleryDots.length) {
     let galleryIndex = 0;
     let galleryPaused = false;
     let galleryTimer;
@@ -62,7 +61,6 @@
       const normalized = (galleryIndex + galleryDots.length) % galleryDots.length;
       galleryIndex = normalized;
       galleryTrack.style.transform = isMobileGallery ? `translateX(-${normalized * 100}%)` : '';
-      galleryCount.textContent = `${String(normalized + 1).padStart(2, '0')} / ${String(galleryDots.length).padStart(2, '0')}`;
       galleryDots.forEach((dot, index) => dot.setAttribute('aria-selected', String(index === normalized)));
     };
     const stopTimer = () => { window.clearInterval(galleryTimer); galleryTimer = undefined; };
