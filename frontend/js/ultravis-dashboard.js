@@ -1,6 +1,7 @@
 (() => {
   const workspace = document.getElementById('workspace');
   const hero = document.getElementById('hero');
+  const phoneStory = document.getElementById('ultraPhoneStory');
   const skillLandUrl = 'https://skillland-platform-yuri386.onrender.com';
   const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, compare: new Set() };
   const escapeHTML = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -19,7 +20,10 @@
 
   async function render(view = currentView()) {
     document.querySelectorAll('[data-view]').forEach(item => item.classList.toggle('is-active', item.dataset.view === view));
-    hero.hidden = view !== 'home';
+    const isHome = view === 'home';
+    hero.hidden = !isHome;
+    if (phoneStory) phoneStory.hidden = !isHome;
+    document.body.classList.toggle('ultra-is-subview', !isHome);
     workspace.className = `vis-workspace view-${view}`;
     try {
       if (view === 'home') return renderHome();

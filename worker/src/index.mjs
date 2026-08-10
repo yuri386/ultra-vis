@@ -239,6 +239,30 @@ async function ultraVisAssistant(request, session, env) {
   const userId = Number(session.sub);
   const lower = message.toLowerCase();
 
+  const directView = [
+    [/(открой|покажи|перейди).{0,35}(заметк|конспект)/, 'notes', 'Открываю личную библиотеку заметок.'],
+    [/(открой|покажи|перейди).{0,35}(мой день|задач|план)/, 'day', 'Открываю «Мой день».'],
+    [/(открой|покажи|перейди).{0,35}(профил|skillland)/, 'profile', 'Открываю профиль SkillLand с твоим учебным прогрессом.'],
+    [/(открой|покажи|перейди).{0,35}(тест|ориентир)/, 'quiz', 'Открываю интерактивный ориентир.'],
+    [/(открой|покажи|перейди).{0,35}(лекци|библиотек)/, 'lectures', 'Открываю библиотеку лекций.'],
+    [/(открой|покажи|перейди).{0,35}(направлен|университет|колледж|вуз)/, 'colleges', 'Открываю подбор направлений и учебных сред.']
+  ].find(([pattern]) => pattern.test(lower));
+  if (directView) {
+    return Response.json({ success: true, reply: directView[2], action: { view: directView[1], label: 'Открыть' } });
+  }
+
+  if (/(всё.*связан|все.*связан|всё.*профил|все.*профил|что.*есть)/.test(lower)) {
+    return Response.json({
+      success: true,
+      reply: 'Вот ключевые части твоего пространства. Выбери, с чего продолжить.',
+      suggestions: [
+        { title: 'Лекции', meta: 'Продолжить или выбрать тему', view: 'lectures' },
+        { title: 'Мой день', meta: 'Собрать следующий шаг', view: 'day' },
+        { title: 'Профиль SkillLand', meta: 'Прогресс и ориентир', view: 'profile' }
+      ]
+    });
+  }
+
   if (/(созда|добав|запиш|сделай).{0,40}(заметк|конспект)|^(заметк|конспект)/.test(lower)) {
     const title = `Заметка: ${assistantShortText(message.replace(/.*?(заметк[ауи]?|конспект)[\s:—-]*/i, ''), 72) || 'Новая мысль'}`;
     const noteBody = `Создано по запросу Ultra VIS AI.\n\n${message}`;

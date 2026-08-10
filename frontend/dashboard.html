@@ -3,50 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Ultra VIS — учись и выбирай свой путь</title>
+  <title>Ultra VIS — твоя траектория</title>
   <link rel="stylesheet" href="/css/ultravis.css">
   <link rel="stylesheet" href="/css/ultravis-product.css">
   <link rel="stylesheet" href="/css/ultravis-learning.css">
   <link rel="stylesheet" href="/css/ultravis-theme-library.css">
   <link rel="stylesheet" href="/css/ultravis-ai.css">
   <link rel="stylesheet" href="/css/ultravis-themes.css">
+  <link rel="stylesheet" href="/css/ultravis-immersive.css">
 </head>
-<body class="vis-product-page">
-  <header class="vis-header">
-    <a class="wordmark" href="/dashboard" aria-label="Ultra VIS"><span class="vis-mark" aria-hidden="true"></span>Ultra VIS</a>
-    <nav class="vis-nav" aria-label="Разделы">
-      <button data-view="home">Главная</button><button data-view="lectures">Лекции</button><button data-view="colleges">Направление</button><button data-view="day">Мой день</button><button data-view="quotes">Идеи</button>
-    </nav>
-    <div class="vis-header-actions"><button class="plain-action" data-view="themes">Тема</button><button class="plain-action" data-view="profile">Профиль</button><button class="logout-button" id="logoutButton" type="button">Выйти</button></div>
-  </header>
+<body class="vis-product-page ultra-vis-dark">
+  <div class="ultra-product-bar" aria-label="Ultra VIS">
+    <button class="ultra-back-button" id="ultraBackButton" type="button" data-view="home" aria-label="На главную Ultra VIS">‹</button>
+    <a class="ultra-home-label" href="/dashboard">Ultra VIS</a>
+    <a class="ultra-close-button" href="https://skillland-platform-yuri386.onrender.com/" aria-label="Закрыть Ultra VIS">×</a>
+  </div>
 
   <main>
-    <section class="vis-hero" id="hero">
-      <img src="/assets/images/ultravis-hero-v2.png" alt="Студент с телефоном открывает образовательный план">
-      <div class="vis-hero-copy">
-        <p class="eyebrow">УЛЬТРАВИЗУАЛЬНЫЙ ПУТЬ К ЗНАНИЯМ</p>
-        <h1>Знания. Выбор.<br><span>Твой следующий шаг.</span></h1>
-        <p>Большие лекции, личный прогресс, выбор направления и связь с профилем SkillLand — в одном спокойном пространстве.</p>
-        <div class="hero-actions"><button class="button button-light" data-view="lectures">Открыть лекции <span aria-hidden="true">→</span></button><button class="hero-text-button" data-view="quiz">Найти свой ориентир</button></div>
+    <section class="ultra-intro" id="hero" aria-labelledby="ultra-intro-title">
+      <picture class="ultra-intro-media">
+        <source media="(max-width: 720px)" srcset="/assets/images/ultravis-hero-mobile-v3.png">
+        <img src="/assets/images/ultravis-hero-desktop-v3.png" alt="">
+      </picture>
+      <p class="ultra-intro-kicker">Выбор становится яснее, когда есть пространство подумать.</p>
+      <div class="ultra-intro-copy">
+        <p class="ultra-intro-label">Ultra VIS</p>
+        <h1 id="ultra-intro-title">Учёба, которая превращается в следующий шаг.</h1>
+        <p>Лекции, заметки, дневной фокус и умный агент — в одном личном пространстве, связанном с твоим профилем SkillLand.</p>
       </div>
     </section>
+
+    <section class="ultra-phone-story" id="ultraPhoneStory" aria-label="Возможности Ultra VIS">
+      <div class="ultra-phone-sticky">
+        <div class="ultra-story-copy" aria-live="polite">
+          <p data-story-copy="0" class="is-active">Читайте лекции.<br>Без шума.</p>
+          <p data-story-copy="1">Обучайтесь.<br>В своём темпе.</p>
+          <p data-story-copy="2">Пишите задачи.<br>На один ясный день.</p>
+          <p data-story-copy="3">Используйте ИИ.<br>Как личного агента.</p>
+        </div>
+        <div class="ultra-phone-visual" id="ultraPhoneVisual">
+          <img src="/assets/images/ultravis-phone-dark-v3.png" alt="Ultra VIS на телефоне">
+        </div>
+        <p class="ultra-phone-caption">Ultra VIS хранит контекст: где вы остановились, что уже поняли и какой шаг выбрать дальше.</p>
+      </div>
+    </section>
+
     <section class="vis-workspace" id="workspace" aria-live="polite"></section>
+
+    <section class="ultra-minimal-links" aria-label="Разделы Ultra VIS">
+      <button type="button" data-view="lectures">Лекции <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="notes">Заметки <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="day">Мой день <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="profile">Профиль SkillLand <span aria-hidden="true">↗</span></button>
+    </section>
   </main>
+
   <div class="ultra-ai-dock" id="ultraAiDock">
     <form class="ultra-ai-composer" id="ultraAiForm">
-      <button class="ultra-ai-toggle" id="ultraAiToggle" type="button" aria-expanded="false" aria-label="Открыть Ultra VIS AI"><span>Ultra VIS AI</span></button>
-      <input id="ultraAiInput" type="text" autocomplete="off" placeholder="Спроси Ultra VIS AI" aria-label="Сообщение для Ultra VIS AI">
-      <button class="ultra-ai-send" type="submit" aria-label="Отправить сообщение">Отправить</button>
+      <button class="ultra-ai-toggle" id="ultraAiToggle" type="button" aria-expanded="false" aria-label="Открыть Ultra VIS AI"><span class="ai-toggle-label">AI</span><span class="ai-plus" aria-hidden="true">+</span></button>
+      <input id="ultraAiInput" type="text" autocomplete="off" placeholder="Спросите Ultra VIS AI" aria-label="Сообщение для Ultra VIS AI">
+      <button class="ultra-ai-send" type="submit" aria-label="Отправить сообщение"><span aria-hidden="true">↗</span></button>
     </form>
   </div>
+
   <div class="ultra-ai-backdrop" id="ultraAiBackdrop" aria-hidden="true"></div>
   <section class="ultra-ai-chat" id="ultraAiChat" aria-live="polite" aria-label="Диалог с Ultra VIS AI">
-    <div class="ultra-ai-chat-head"><div><p class="eyebrow">ULTRA VIS AI</p><strong>Твой учебный помощник</strong></div><button id="ultraAiClose" type="button">Свернуть</button></div>
+    <button id="ultraAiClose" class="ultra-ai-close" type="button" aria-label="Закрыть чат">×</button>
     <div class="ultra-ai-messages" id="ultraAiMessages"></div>
   </section>
-  <footer class="footer vis-footer"><span>© 2026 SkillLand</span><span>Ultra VIS — твоя образовательная траектория.</span></footer>
-  <script src="/js/ultravis-app.js"></script>
+
+  <footer class="ultra-footer">
+    <span>Ultra VIS · SkillLand</span>
+    <a href="https://skillland-platform-yuri386.onrender.com/">Вернуться в SkillLand ↗</a>
+  </footer>
+
   <script src="/js/ultravis-dashboard.js"></script>
   <script src="/js/ultravis-ai.js"></script>
+  <script src="/js/ultravis-immersive.js"></script>
 </body>
 </html>

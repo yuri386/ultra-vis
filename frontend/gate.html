@@ -1,32 +1,35 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <title>Sign in — Ultra VIS</title>
+  <title>Войти — Ultra VIS</title>
   <link rel="stylesheet" href="/css/ultravis.css">
+  <link rel="stylesheet" href="/css/ultravis-immersive.css">
 </head>
-<body class="gate-page">
-  <main class="access-shell" aria-labelledby="access-title">
-    <a class="wordmark access-wordmark" href="https://skillland-platform-yuri386.onrender.com/" aria-label="SkillLand home">
-      <span class="wordmark-leaf" aria-hidden="true"></span>SkillLand
-    </a>
-    <section class="access-card">
-      <div class="access-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <p class="eyebrow">ULTRA VIS</p>
-      <h1 id="access-title">See the next move.</h1>
-      <p class="access-copy">Ultra VIS is your private space for turning ambition into a clear career direction.</p>
-      <a class="button button-primary access-button" href="/auth/skillland">Sign in via SkillLand <span aria-hidden="true">→</span></a>
-      <p class="access-note">An active SkillLand account is required to continue.</p>
+<body class="gate-page ultra-vis-dark">
+  <main class="ultra-gate" aria-labelledby="access-title">
+    <picture class="ultra-gate-media">
+      <source media="(max-width: 720px)" srcset="/assets/images/ultravis-hero-mobile-v3.png">
+      <img src="/assets/images/ultravis-hero-desktop-v3.png" alt="">
+    </picture>
+    <div class="ultra-product-bar" aria-label="Ultra VIS">
+      <span class="ultra-home-label">Ultra VIS</span>
+      <a class="ultra-close-button" href="https://skillland-platform-yuri386.onrender.com/" aria-label="Закрыть Ultra VIS">×</a>
+    </div>
+    <section class="ultra-gate-copy">
+      <p>Ultra VIS — личное пространство обучения, связанное с SkillLand.</p>
+      <h1 id="access-title">Продолжить свой путь.</h1>
+      <a class="ultra-gate-action" href="/auth/skillland">Войти через SkillLand <span aria-hidden="true">↗</span></a>
       <p class="access-error" id="accessError" role="alert" hidden></p>
     </section>
   </main>
   <script>
     const error = new URLSearchParams(location.search).get('error');
     const messages = {
-      'skillland-session-expired': 'Your SkillLand session expired. Please sign in again.',
-      'skillland-account-error': 'We could not prepare your Ultra VIS profile. Please try again.'
+      'skillland-session-expired': 'Сессия SkillLand завершилась. Войдите ещё раз.',
+      'skillland-account-error': 'Не удалось подготовить профиль Ultra VIS. Попробуйте ещё раз.'
     };
     if (messages[error]) { const el = document.getElementById('accessError'); el.textContent = messages[error]; el.hidden = false; }
   </script>
