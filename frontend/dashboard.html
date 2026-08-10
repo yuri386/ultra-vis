@@ -25,11 +25,9 @@
         <source media="(max-width: 720px)" srcset="/assets/images/ultravis-hero-mobile-v3.png">
         <img src="/assets/images/ultravis-hero-desktop-v3.png" alt="">
       </picture>
-      <p class="ultra-intro-kicker">Выбор становится яснее, когда есть пространство подумать.</p>
       <div class="ultra-intro-copy">
         <p class="ultra-intro-label">Ultra VIS</p>
-        <h1 id="ultra-intro-title">Учёба, которая превращается в следующий шаг.</h1>
-        <p>Лекции, заметки, дневной фокус и умный агент — в одном личном пространстве, связанном с твоим профилем SkillLand.</p>
+        <h1 id="ultra-intro-title">Учись. Сохраняй. Двигайся дальше.</h1>
       </div>
     </section>
 
@@ -39,12 +37,11 @@
           <p data-story-copy="0" class="is-active">Читайте лекции.<br>Без шума.</p>
           <p data-story-copy="1">Обучайтесь.<br>В своём темпе.</p>
           <p data-story-copy="2">Пишите задачи.<br>На один ясный день.</p>
-          <p data-story-copy="3">Используйте ИИ.<br>Как личного агента.</p>
+          <p data-story-copy="3">Используйте <span class="ultra-ai-spectrum">ИИ</span>.<br>Как личного агента.</p>
         </div>
         <div class="ultra-phone-visual" id="ultraPhoneVisual">
-          <img src="/assets/images/ultravis-phone-dark-v3.png" alt="Ultra VIS на телефоне">
+          <img src="/assets/images/ultravis-phone-cutout-v4.png" alt="Ultra VIS на телефоне">
         </div>
-        <p class="ultra-phone-caption">Ultra VIS хранит контекст: где вы остановились, что уже поняли и какой шаг выбрать дальше.</p>
       </div>
     </section>
 
@@ -52,9 +49,39 @@
 
     <section class="ultra-minimal-links" aria-label="Разделы Ultra VIS">
       <button type="button" data-view="lectures">Лекции <span aria-hidden="true">↗</span></button>
-      <button type="button" data-view="notes">Заметки <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="colleges">Направление <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="quiz">Тест <span aria-hidden="true">↗</span></button>
       <button type="button" data-view="day">Мой день <span aria-hidden="true">↗</span></button>
-      <button type="button" data-view="profile">Профиль SkillLand <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="notes">Заметки <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="games">Практика <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="quotes">Идеи <span aria-hidden="true">↗</span></button>
+      <button type="button" data-view="themes">Оформление <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="ultra-feature-gallery" id="ultraFeatureGallery" aria-label="Как работает Ultra VIS">
+      <div class="ultra-gallery-track" id="ultraGalleryTrack">
+        <article class="ultra-gallery-card">
+          <img src="/assets/images/ultravis-gallery-code-v1.png" alt="Студент изучает программирование в библиотеке">
+          <p>Лекции без спешки. Сохраняй место и возвращайся к теме именно там, где остановился.</p>
+        </article>
+        <article class="ultra-gallery-card">
+          <img src="/assets/images/ultravis-gallery-plan-v1.png" alt="Студентка планирует учебный день">
+          <p>Один ясный план на день. Задачи остаются личными и помогают не терять направление.</p>
+        </article>
+        <article class="ultra-gallery-card">
+          <img src="/assets/images/ultravis-gallery-studio-v1.png" alt="Студенты обсуждают идею с наставником">
+          <p>Среда и люди рядом. Выбирай, где развивать навыки и как связать обучение со SkillLand.</p>
+        </article>
+      </div>
+      <div class="ultra-gallery-controls" aria-label="Управление галереей">
+        <span class="ultra-gallery-count" id="ultraGalleryCount">01 / 03</span>
+        <div class="ultra-gallery-dots" role="tablist" aria-label="Слайды галереи">
+          <button type="button" data-gallery-index="0" aria-label="Слайд 1" aria-selected="true"></button>
+          <button type="button" data-gallery-index="1" aria-label="Слайд 2" aria-selected="false"></button>
+          <button type="button" data-gallery-index="2" aria-label="Слайд 3" aria-selected="false"></button>
+        </div>
+        <button class="ultra-gallery-pause" id="ultraGalleryPause" type="button" aria-label="Поставить прокрутку на паузу">Ⅱ</button>
+      </div>
     </section>
   </main>
 

@@ -15,7 +15,7 @@
     ? { ai: 'ULTRA VIS AI', thinking: 'Ultra VIS AI обрабатывает запрос', open: 'Открыть', error: 'Не удалось выполнить запрос. Попробуй ещё раз.' }
     : { ai: 'ULTRA VIS AI', thinking: 'Ultra VIS AI is working on it', open: 'Open', error: 'The request could not be completed. Try again.' };
   const api = async (url, options = {}) => {
-    const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+    const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || labels.error);
     return body;

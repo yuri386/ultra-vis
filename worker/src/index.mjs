@@ -87,6 +87,15 @@ function assetRequest(request, pathname) {
   return new Request(assetUrl, request);
 }
 
+async function privateAsset(request, pathname, env) {
+  const response = await env.ASSETS.fetch(assetRequest(request, pathname));
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'private, no-store, max-age=0');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Vary', 'Cookie');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function cleanProfile(profile) {
   const email = String(profile?.email || '').trim().toLowerCase();
   const fullName = String(profile?.full_name || profile?.name || '').trim().replace(/\s+/g, ' ').slice(0, 120);
@@ -495,7 +504,7 @@ export default {
     const session = await readSession(request, env.JWT_SECRET);
 
     if (path === '/api/health') return Response.json({ ok: true, service: 'ultravis', database: 'cloudflare-d1' });
-    if (path === '/api/auth/session') return session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 });
+    if (path === '/api/auth/session') return session ? Response.json({ authenticated: true, user: session }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }) : Response.json({ authenticated: false }, { status: 401, headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
     if (path === '/api/assistant' && request.method === 'POST') return ultraVisAssistant(request, session, env);
     if (path.startsWith('/api/content/')) return contentApi(request, path, session, env);
@@ -524,11 +533,11 @@ export default {
 
     // Cloudflare Assets reserves index.html for /. The private page therefore
     // has its own canonical URL, avoiding a redirect loop for signed-in users.
-    if (path === '/' && request.method === 'GET') return env.ASSETS.fetch(assetRequest(request, session ? '/dashboard' : '/gate'));
+    if (path === '/' && request.method === 'GET') return session ? privateAsset(request, '/dashboard', env) : env.ASSETS.fetch(assetRequest(request, '/gate'));
     if (path === '/gate' && session) return redirect('/');
     if (legacyProductRoutes[path] && session) return redirect(`/dashboard?view=${legacyProductRoutes[path]}`);
     if (isProtectedPagePath(path) && !session) return redirect('/');
-    if (isProtectedPagePath(path) && session) return env.ASSETS.fetch(assetRequest(request, '/dashboard'));
+    if (isProtectedPagePath(path) && session) return privateAsset(request, '/dashboard', env);
     if (path.startsWith('/api/')) return Response.json({ success: false, error: 'Not found' }, { status: 404 });
     return env.ASSETS.fetch(request);
   }

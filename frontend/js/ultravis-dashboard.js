@@ -3,15 +3,23 @@
   const hero = document.getElementById('hero');
   const phoneStory = document.getElementById('ultraPhoneStory');
   const skillLandUrl = 'https://skillland-platform-yuri386.onrender.com';
-  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, compare: new Set() };
+  const state = { lectures: [], colleges: [], notes: [], tasks: [], session: null, learning: null, compare: new Set(), storageScope: 'uv:guest' };
   const escapeHTML = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const api = async (url, options = {}) => {
-    const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+    const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || 'Не удалось получить данные. Попробуй ещё раз.');
     return body;
   };
   const currentView = () => new URLSearchParams(location.search).get('view') || 'home';
+  const accountStorageKey = key => `${state.storageScope}:${key}`;
+  async function establishAccountScope() {
+    const sessionData = await api('/api/auth/session');
+    state.session = sessionData.user;
+    const identity = String(sessionData.user?.sub || sessionData.user?.id || sessionData.user?.email || 'guest');
+    state.storageScope = `uv:${identity}`;
+    document.documentElement.dataset.visTheme = localStorage.getItem(accountStorageKey('theme')) || 'dark';
+  }
   const go = view => { history.pushState({}, '', `/dashboard?view=${view}`); render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const setTitle = (eyebrow, title, text) => `<div class="section-heading"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p>${text}</p></div>`;
   const empty = text => `<p class="empty-copy">${escapeHTML(text)}</p>`;
@@ -54,17 +62,7 @@
     const continueBlock = current
       ? `<button class="continue-panel" data-open-lecture="${current.id}"><span>Продолжить</span><strong>${escapeHTML(current.title)}</strong><small>${current.progress}% изучено · ${escapeHTML(current.category)}</small><b>Открыть лекцию</b></button>`
       : `<button class="continue-panel continue-panel-start" data-view="lectures"><span>Твоя траектория</span><strong>Начни с первой лекции</strong><small>Выбирай направление, сохраняй главное и возвращайся в удобный момент.</small><b>Открыть библиотеку</b></button>`;
-    const modules = [
-      ['01', 'Лекции', 'Большие понятные материалы и твой прогресс.', 'lectures', 'Учиться'],
-      ['02', 'Направление', 'Сравнение учебных маршрутов и специальностей.', 'colleges', 'Выбрать'],
-      ['03', 'Тест', 'Четыре вопроса, чтобы выбрать следующий шаг.', 'quiz', 'Пройти'],
-      ['04', 'Мой день', 'Одна цель и понятные действия на сегодня.', 'day', 'Спланировать'],
-      ['05', 'Заметки', 'Конспекты, к которым легко вернуться.', 'notes', 'Открыть'],
-      ['06', 'Практика', 'Короткая пауза для фокуса.', 'games', 'Начать'],
-      ['07', 'Идеи', 'Мысли, которые стоит сохранить.', 'quotes', 'Посмотреть'],
-      ['08', 'Оформление', 'Выбери спокойный режим для работы.', 'themes', 'Настроить']
-    ];
-    workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Учёба, которая ведёт к следующему шагу.', 'Ultra VIS соединён с твоим профилем SkillLand. Прогресс, выбранное направление и вывод теста остаются с тобой.')}<section class="learning-overview"><div><span>Освоено</span><strong>${learning.completed} из ${learning.total}</strong><small>лекций завершено</small></div><div><span>В работе</span><strong>${learning.started}</strong><small>материалов открыто</small></div><div><span>Темп</span><strong>${learning.completion_rate}%</strong><small>общий прогресс</small></div></section>${continueBlock}<div class="module-grid">${modules.map(([number, title, text, view, label]) => `<button class="module-card" data-view="${view}"><span class="module-index">${number}</span><strong>${title}</strong><small>${text}</small><b>${label} <span aria-hidden="true">→</span></b></button>`).join('')}</div>`;
+    workspace.innerHTML = `${setTitle('ТВОЁ ПРОСТРАНСТВО', 'Учёба, которая ведёт к следующему шагу.', 'Твой прогресс и выбранное направление остаются в профиле SkillLand.')}<section class="learning-overview"><div><span>Освоено</span><strong>${learning.completed} из ${learning.total}</strong><small>лекций завершено</small></div><div><span>В работе</span><strong>${learning.started}</strong><small>материалов открыто</small></div><div><span>Темп</span><strong>${learning.completion_rate}%</strong><small>общий прогресс</small></div></section>${continueBlock}`;
   }
 
   async function renderLectures() {
@@ -194,7 +192,7 @@
 
   function renderQuotes() {
     const quotes = [['Учиться — значит замечать связь между тем, что уже знаешь, и тем, что ещё умеешь узнать.', 'Ultra VIS'], ['Маленький понятный шаг сильнее большого обещания на потом.', 'SkillLand'], ['Хороший вопрос делает путь короче.', 'Ultra VIS']];
-    workspace.innerHTML = `${setTitle('ИДЕИ', 'Мысли, которые остаются с тобой.', 'Сохрани нужную фразу в этом браузере и возвращайся к ней позже.')}<div class="notes-grid">${quotes.map(([text, author], index) => `<article class="note-card"><h3>${escapeHTML(text)}</h3><p>${escapeHTML(author)}</p><button data-like-quote="${index}">${localStorage.getItem(`uv-quote-${index}`) === '1' ? 'Сохранено' : 'Сохранить'}</button></article>`).join('')}</div>`;
+    workspace.innerHTML = `${setTitle('ИДЕИ', 'Мысли, которые остаются с тобой.', 'Сохрани нужную фразу и возвращайся к ней позже.')}<div class="notes-grid">${quotes.map(([text, author], index) => `<article class="note-card"><h3>${escapeHTML(text)}</h3><p>${escapeHTML(author)}</p><button data-like-quote="${index}">${localStorage.getItem(accountStorageKey(`quote-${index}`)) === '1' ? 'Сохранено' : 'Сохранить'}</button></article>`).join('')}</div>`;
   }
 
   function renderThemes() {
@@ -213,8 +211,8 @@
     if (target.dataset.compareCollege) { const id = Number(target.dataset.compareCollege); state.compare.has(id) ? state.compare.delete(id) : state.compare.add(id); return renderColleges(); }
     if (target.dataset.deleteNote) { await api(`/api/content/notes/${target.dataset.deleteNote}`, { method: 'DELETE' }); return renderNotes(); }
     if (target.dataset.deleteTask) { await api(`/api/content/tasks/${target.dataset.deleteTask}`, { method: 'DELETE' }); return renderDay(); }
-    if (target.dataset.likeQuote !== undefined) { const key = `uv-quote-${target.dataset.likeQuote}`; localStorage.setItem(key, localStorage.getItem(key) === '1' ? '0' : '1'); return renderQuotes(); }
-    if (target.dataset.theme) { document.documentElement.dataset.visTheme = target.dataset.theme; localStorage.setItem('uv-theme', target.dataset.theme); return renderThemes(); }
+    if (target.dataset.likeQuote !== undefined) { const key = accountStorageKey(`quote-${target.dataset.likeQuote}`); localStorage.setItem(key, localStorage.getItem(key) === '1' ? '0' : '1'); return renderQuotes(); }
+    if (target.dataset.theme) { document.documentElement.dataset.visTheme = target.dataset.theme; localStorage.setItem(accountStorageKey('theme'), target.dataset.theme); return renderThemes(); }
     if (target.dataset.deleteAdminLecture) { await api(`/api/content/admin/lectures/${target.dataset.deleteAdminLecture}`, { method: 'DELETE' }); state.lectures = []; return renderAdmin(); }
   });
 
@@ -276,6 +274,6 @@
 
   document.getElementById('logoutButton')?.addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/'; });
   window.addEventListener('popstate', () => render(currentView()));
-  document.documentElement.dataset.visTheme = localStorage.getItem('uv-theme') || 'light';
-  render();
+  window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+  establishAccountScope().catch(() => { document.documentElement.dataset.visTheme = 'dark'; }).finally(() => render());
 })();
