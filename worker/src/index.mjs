@@ -382,6 +382,32 @@ async function durableAccountApi(request, env) {
   return Response.json({ ok: false, error: 'Wrong backup operation.' }, { status: 403 });
 }
 
+// A resident passkey lets a new Render process identify an account without an
+// email or password. The browser reveals only an opaque credential ID; the
+// payload returned from D1 is encrypted by SkillLand before it reaches D1.
+async function durablePasskeyApi(request, env) {
+  const body = await requestJson(request);
+  const credentialId = String(body?.credential_id || '');
+  if (credentialId) {
+    if (!/^[A-Za-z0-9_-]{16,1024}$/.test(credentialId)) return Response.json({ ok: false, error: 'Passkey is invalid.' }, { status: 400 });
+    const row = await env.DB.prepare('SELECT encrypted_payload FROM skillland_passkey_index WHERE credential_id=? LIMIT 1').bind(credentialId).first();
+    return Response.json({ ok: true, encrypted_payload: row?.encrypted_payload || '' });
+  }
+  const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
+  if (!grant || grant.operation !== 'passkey_save') return Response.json({ ok: false, error: 'Passkey ticket expired.' }, { status: 401 });
+  const id = String(grant.passkey_credential_id || '');
+  const accountKey = String(grant.account_key || '');
+  const payload = String(grant.encrypted_payload || '');
+  if (!/^[A-Za-z0-9_-]{16,1024}$/.test(id) || !/^[A-Za-z0-9_-]{32,64}$/.test(accountKey) || payload.length < 40 || payload.length > 1800000) {
+    return Response.json({ ok: false, error: 'Passkey payload is invalid.' }, { status: 400 });
+  }
+  await env.DB.prepare(`INSERT INTO skillland_passkey_index(credential_id,account_key,encrypted_payload,updated_at)
+    VALUES(?,?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(credential_id) DO UPDATE SET account_key=excluded.account_key, encrypted_payload=excluded.encrypted_payload, updated_at=CURRENT_TIMESTAMP`)
+    .bind(id, accountKey, payload).run();
+  return Response.json({ ok: true });
+}
+
 async function durableGameReviewsApi(request, env) {
   if (request.method === 'GET') {
     const gameKey = String(new URL(request.url).searchParams.get('game') || '').toLowerCase();
@@ -1040,6 +1066,9 @@ export default {
     }
     if (path === '/api/skillland-durable/account' && request.method === 'POST') {
       return durableAccountApi(request, env);
+    }
+    if (path === '/api/skillland-durable/passkeys' && request.method === 'POST') {
+      return durablePasskeyApi(request, env);
     }
     if (path === '/api/skillland-durable/game-reviews' && (request.method === 'GET' || request.method === 'POST')) {
       return durableGameReviewsApi(request, env);
