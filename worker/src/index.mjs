@@ -123,7 +123,7 @@ function cleanProfile(profile) {
     id,
     email,
     fullName,
-    role: profile?.role === 'employer' ? 'employer' : 'student',
+    role: profile?.role === 'employer' ? 'employer' : profile?.role === 'student' ? 'student' : 'pupil',
     headline: String(profile?.headline || '').trim().slice(0, 180),
     syncToken: String(profile?.sync_token || '').trim()
   };
@@ -223,7 +223,7 @@ function directoryProfileFromRow(row) {
     directory_id: String(row?.directory_id || ''),
     skillland_user_id: Number(row?.skillland_user_id || 0),
     full_name: String(row?.full_name || ''),
-    role: row?.role === 'employer' ? 'employer' : 'student',
+    role: row?.role === 'employer' ? 'employer' : row?.role === 'student' ? 'student' : 'pupil',
     headline: String(row?.headline || ''),
     bio: String(row?.bio || ''),
     city: String(row?.city || ''),
@@ -249,7 +249,7 @@ async function backfillLegacyDirectory(env) {
     await env.DB.prepare(`INSERT OR IGNORE INTO skillland_directory_profiles
       (directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url, updated_at)
       VALUES (?, ?, ?, ?, ?, '', '', '', '[]', '', '', '', CURRENT_TIMESTAMP)`)
-      .bind(directoryId, skillLandUserId, fullName, row.skillland_role === 'employer' ? 'employer' : 'student', String(row.skillland_headline || '').slice(0, 180))
+      .bind(directoryId, skillLandUserId, fullName, row.skillland_role === 'employer' ? 'employer' : 'pupil', String(row.skillland_headline || '').slice(0, 180))
       .run();
   }));
 }
@@ -267,14 +267,21 @@ async function directoryMirrorApi(request, path, env) {
     return Response.json({ ok: true });
   }
   if (path === '/api/skillland-directory/list') {
-    const role = grant.operation === 'list' && (grant.target_role === 'student' || grant.target_role === 'employer') ? grant.target_role : '';
+    const role = grant.operation === 'list' && ['pupil', 'student', 'employer', 'learners'].includes(grant.target_role) ? grant.target_role : '';
     if (!role) return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
     await backfillLegacyDirectory(env);
     const offset = Math.max(0, Math.min(999999, Math.floor(Number(body?.offset) || 0)));
     const limit = Math.max(1, Math.min(48, Math.floor(Number(body?.limit) || 24)));
-    const totalRow = await env.DB.prepare(`SELECT COUNT(*) AS total FROM skillland_directory_profiles WHERE role = ?`).bind(role).first();
+    const matchTerms = [...new Set((Array.isArray(body?.match_terms) ? body.match_terms : [])
+      .map(term => String(term || '').trim().toLowerCase()).filter(term => /^[\p{L}\p{N}+#.+-]{2,}$/u.test(term)).slice(0, 14))];
+    const roleSql = role === 'learners' ? "role IN ('pupil','student')" : 'role = ?';
+    const roleParams = role === 'learners' ? [] : [role];
+    const searchable = "lower(coalesce(skills_json,'') || ' ' || coalesce(headline,'') || ' ' || coalesce(bio,'') || ' ' || coalesce(specialty,'') || ' ' || coalesce(company,'') || ' ' || coalesce(employment_type,''))";
+    const scoreSql = matchTerms.length ? matchTerms.map(() => `CASE WHEN ${searchable} LIKE ? THEN 1 ELSE 0 END`).join(' + ') : '0';
+    const scoreParams = matchTerms.map(term => `%${term}%`);
+    const totalRow = await env.DB.prepare(`SELECT COUNT(*) AS total FROM skillland_directory_profiles WHERE ${roleSql}`).bind(...roleParams).first();
     const rows = await env.DB.prepare(`SELECT directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url
-      FROM skillland_directory_profiles WHERE role = ? ORDER BY datetime(updated_at) DESC, directory_id ASC LIMIT ? OFFSET ?`).bind(role, limit, offset).all();
+      FROM skillland_directory_profiles WHERE ${roleSql} ORDER BY ${scoreSql} DESC, datetime(updated_at) DESC, directory_id ASC LIMIT ? OFFSET ?`).bind(...roleParams, ...scoreParams, limit, offset).all();
     const profiles = (rows.results || []).map(directoryProfileFromRow);
     return Response.json({ ok: true, total: Number(totalRow?.total || 0), profiles }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
@@ -301,7 +308,11 @@ async function directoryApplicationsApi(request, env) {
     const recipient = await env.DB.prepare('SELECT directory_id, role FROM skillland_directory_profiles WHERE directory_id = ? LIMIT 1')
       .bind(recipientDirectoryId).first();
     if (!recipient) return Response.json({ ok: false, error: 'Profile is no longer in the directory.' }, { status: 404 });
-    if (recipient.role === profile.role) return Response.json({ ok: false, error: 'Choose a profile from the other role.' }, { status: 400 });
+    const senderLearner = profile.role === 'pupil' || profile.role === 'student';
+    const recipientLearner = recipient.role === 'pupil' || recipient.role === 'student';
+    if (!(profile.role === 'employer' && recipientLearner) && !(recipient.role === 'employer' && senderLearner)) {
+      return Response.json({ ok: false, error: 'Requests are available only between an employer and a learner.' }, { status: 400 });
+    }
     await env.DB.prepare(`INSERT INTO skillland_directory_applications
       (sender_directory_id, recipient_directory_id, note, status, updated_at)
       VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)
