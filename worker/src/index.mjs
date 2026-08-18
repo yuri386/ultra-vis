@@ -216,6 +216,25 @@ async function upsertDirectoryProfile(profile, env) {
     .run();
 }
 
+function directoryProfileFromRow(row) {
+  let skills = [];
+  try { skills = JSON.parse(row?.skills_json || '[]'); } catch {}
+  return {
+    directory_id: String(row?.directory_id || ''),
+    skillland_user_id: Number(row?.skillland_user_id || 0),
+    full_name: String(row?.full_name || ''),
+    role: row?.role === 'employer' ? 'employer' : 'student',
+    headline: String(row?.headline || ''),
+    bio: String(row?.bio || ''),
+    city: String(row?.city || ''),
+    specialty: String(row?.specialty || ''),
+    skills: Array.isArray(skills) ? skills : [],
+    company: String(row?.company || ''),
+    employment_type: String(row?.employment_type || ''),
+    avatar_url: ''
+  };
+}
+
 // Some people had already opened Ultra VIS before the directory mirror was
 // introduced. Their safe public summary is already in D1, so seed it once the
 // bridge is first used rather than waiting for every person to sign in again.
@@ -251,29 +270,80 @@ async function directoryMirrorApi(request, path, env) {
     const role = grant.operation === 'list' && (grant.target_role === 'student' || grant.target_role === 'employer') ? grant.target_role : '';
     if (!role) return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
     await backfillLegacyDirectory(env);
+    const offset = Math.max(0, Math.min(999999, Math.floor(Number(body?.offset) || 0)));
+    const limit = Math.max(1, Math.min(48, Math.floor(Number(body?.limit) || 24)));
+    const totalRow = await env.DB.prepare(`SELECT COUNT(*) AS total FROM skillland_directory_profiles WHERE role = ?`).bind(role).first();
     const rows = await env.DB.prepare(`SELECT directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url
-      FROM skillland_directory_profiles WHERE role = ? ORDER BY datetime(updated_at) DESC LIMIT 200`).bind(role).all();
-    const profiles = (rows.results || []).map(row => {
-      let skills = [];
-      try { skills = JSON.parse(row.skills_json || '[]'); } catch {}
-      return {
-        directory_id: row.directory_id,
-        skillland_user_id: Number(row.skillland_user_id),
-        full_name: row.full_name,
-        role: row.role,
-        headline: row.headline || '',
-        bio: row.bio || '',
-        city: row.city || '',
-        specialty: row.specialty || '',
-        skills: Array.isArray(skills) ? skills : [],
-        company: row.company || '',
-        employment_type: row.employment_type || '',
-        avatar_url: row.avatar_url || ''
-      };
-    });
-    return Response.json({ ok: true, profiles }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+      FROM skillland_directory_profiles WHERE role = ? ORDER BY datetime(updated_at) DESC, directory_id ASC LIMIT ? OFFSET ?`).bind(role, limit, offset).all();
+    const profiles = (rows.results || []).map(directoryProfileFromRow);
+    return Response.json({ ok: true, total: Number(totalRow?.total || 0), profiles }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
   return Response.json({ ok: false, error: 'Not found.' }, { status: 404 });
+}
+
+async function directoryApplicationsApi(request, env) {
+  const body = await requestJson(request);
+  const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
+  if (!grant) return Response.json({ ok: false, error: 'Directory ticket expired.' }, { status: 401 });
+  if (!['application_create', 'application_list', 'application_update'].includes(grant.operation)) {
+    return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
+  }
+  const profile = cleanDirectoryMirrorProfile(grant.profile);
+  if (!profile) return Response.json({ ok: false, error: 'Profile is invalid.' }, { status: 400 });
+  await backfillLegacyDirectory(env);
+  await upsertDirectoryProfile(profile, env);
+
+  if (grant.operation === 'application_create') {
+    const recipientDirectoryId = String(grant.target_directory_id || '');
+    if (!/^[A-Za-z0-9_-]{32,64}$/.test(recipientDirectoryId) || recipientDirectoryId === profile.directoryId) {
+      return Response.json({ ok: false, error: 'Choose another profile.' }, { status: 400 });
+    }
+    const recipient = await env.DB.prepare('SELECT directory_id, role FROM skillland_directory_profiles WHERE directory_id = ? LIMIT 1')
+      .bind(recipientDirectoryId).first();
+    if (!recipient) return Response.json({ ok: false, error: 'Profile is no longer in the directory.' }, { status: 404 });
+    if (recipient.role === profile.role) return Response.json({ ok: false, error: 'Choose a profile from the other role.' }, { status: 400 });
+    await env.DB.prepare(`INSERT INTO skillland_directory_applications
+      (sender_directory_id, recipient_directory_id, note, status, updated_at)
+      VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+      ON CONFLICT(sender_directory_id, recipient_directory_id) DO UPDATE SET
+        note=excluded.note, status='pending', updated_at=CURRENT_TIMESTAMP`)
+      .bind(profile.directoryId, recipientDirectoryId, String(grant.note || '').trim().slice(0, 500)).run();
+    const application = await env.DB.prepare(`SELECT id, status FROM skillland_directory_applications
+      WHERE sender_directory_id=? AND recipient_directory_id=? LIMIT 1`).bind(profile.directoryId, recipientDirectoryId).first();
+    return Response.json({ ok: true, application_id: Number(application?.id || 0), status: application?.status || 'pending' });
+  }
+
+  if (grant.operation === 'application_update') {
+    const applicationId = Number(grant.application_id);
+    const nextStatus = grant.action === 'accept' ? 'accepted' : grant.action === 'reject' ? 'rejected' : '';
+    if (!Number.isInteger(applicationId) || applicationId < 1 || !nextStatus) return Response.json({ ok: false, error: 'Application update is invalid.' }, { status: 400 });
+    const existing = await env.DB.prepare(`SELECT id FROM skillland_directory_applications
+      WHERE id=? AND recipient_directory_id=? LIMIT 1`).bind(applicationId, profile.directoryId).first();
+    if (!existing) return Response.json({ ok: false, error: 'Application not found.' }, { status: 404 });
+    await env.DB.prepare(`UPDATE skillland_directory_applications SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+      .bind(nextStatus, applicationId).run();
+    return Response.json({ ok: true, status: nextStatus });
+  }
+
+  const inbox = await env.DB.prepare(`SELECT a.id, a.note, a.status, a.created_at,
+      p.directory_id, p.full_name, p.role, p.headline, p.bio, p.city, p.specialty, p.skills_json, p.company, p.employment_type
+      FROM skillland_directory_applications a JOIN skillland_directory_profiles p ON p.directory_id=a.sender_directory_id
+      WHERE a.recipient_directory_id=?
+      ORDER BY CASE a.status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, datetime(a.updated_at) DESC, a.id DESC`)
+    .bind(profile.directoryId).all();
+  const sent = await env.DB.prepare(`SELECT a.id, a.note, a.status, a.created_at,
+      p.directory_id, p.full_name, p.role, p.headline, p.bio, p.city, p.specialty, p.skills_json, p.company, p.employment_type
+      FROM skillland_directory_applications a JOIN skillland_directory_profiles p ON p.directory_id=a.recipient_directory_id
+      WHERE a.sender_directory_id=?
+      ORDER BY CASE a.status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, datetime(a.updated_at) DESC, a.id DESC`)
+    .bind(profile.directoryId).all();
+  const toApplication = row => ({
+    id: Number(row.id), note: String(row.note || ''), status: row.status, created_at: row.created_at || '',
+    other_user: directoryProfileFromRow(row)
+  });
+  return Response.json({ ok: true, inbox: (inbox.results || []).map(toApplication), sent: (sent.results || []).map(toApplication) }, {
+    headers: { 'Cache-Control': 'no-store, max-age=0' }
+  });
 }
 
 async function upsertUser(profile, env) {
@@ -899,6 +969,9 @@ export default {
     if (path === '/api/health') return Response.json({ ok: true, service: 'ultravis', database: 'cloudflare-d1' });
     if ((path === '/api/skillland-directory/sync' || path === '/api/skillland-directory/list') && request.method === 'POST') {
       return directoryMirrorApi(request, path, env);
+    }
+    if (path === '/api/skillland-directory/application' && request.method === 'POST') {
+      return directoryApplicationsApi(request, env);
     }
     if (path === '/api/auth/session') return privateApi(session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 }));
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
