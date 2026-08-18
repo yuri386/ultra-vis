@@ -704,6 +704,9 @@ async function ultraVisAssistant(request, session, env) {
   if (!message) return Response.json({ success: false, error: 'Напиши запрос для Ultra VIS AI.' }, { status: 400 });
   const userId = Number(session.sub);
   const lower = message.toLowerCase();
+  if (/^(пр|привет|ку|салам|hi|hello)(?:\s|[!,.?]|$)/.test(lower) && lower.length < 24) {
+    return Response.json({ success: true, reply: 'Привет. Я на месте: могу открыть нужный раздел, найти лекции, собрать план дня или создать заметку.' });
+  }
   const context = body.context && typeof body.context === 'object' ? body.context : {};
   const lectureId = Number(context.lecture_id || 0);
   const blockKey = String(context.block_key || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 72);
