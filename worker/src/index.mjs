@@ -160,7 +160,7 @@ function cleanDirectoryMirrorProfile(profile) {
     directoryId,
     skillLandUserId,
     fullName,
-    role: profile?.role === 'employer' ? 'employer' : 'student',
+    role: profile?.role === 'employer' ? 'employer' : profile?.role === 'student' ? 'student' : 'pupil',
     headline: String(profile?.headline || '').trim().slice(0, 180),
     bio: String(profile?.bio || '').trim().slice(0, 1200),
     city: String(profile?.city || '').trim().slice(0, 120),
@@ -355,6 +355,60 @@ async function directoryApplicationsApi(request, env) {
   return Response.json({ ok: true, inbox: (inbox.results || []).map(toApplication), sent: (sent.results || []).map(toApplication) }, {
     headers: { 'Cache-Control': 'no-store, max-age=0' }
   });
+}
+
+async function durableAccountApi(request, env) {
+  const body = await requestJson(request);
+  const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
+  if (!grant) return Response.json({ ok: false, error: 'Backup ticket expired.' }, { status: 401 });
+  if (grant.operation === 'account_backup_save') {
+    const key = String(grant.account_key || '');
+    const payload = String(grant.encrypted_payload || '');
+    if (!/^[A-Za-z0-9_-]{32,64}$/.test(key) || payload.length < 40 || payload.length > 1800000) {
+      return Response.json({ ok: false, error: 'Backup payload is invalid.' }, { status: 400 });
+    }
+    await env.DB.prepare(`INSERT INTO skillland_account_backups(account_key, encrypted_payload, updated_at)
+      VALUES(?,?,CURRENT_TIMESTAMP)
+      ON CONFLICT(account_key) DO UPDATE SET encrypted_payload=excluded.encrypted_payload, updated_at=CURRENT_TIMESTAMP`)
+      .bind(key, payload).run();
+    return Response.json({ ok: true });
+  }
+  if (grant.operation === 'account_backup_read') {
+    const key = String(grant.account_key || '');
+    if (!/^[A-Za-z0-9_-]{32,64}$/.test(key)) return Response.json({ ok: false, error: 'Backup key is invalid.' }, { status: 400 });
+    const row = await env.DB.prepare('SELECT encrypted_payload FROM skillland_account_backups WHERE account_key=? LIMIT 1').bind(key).first();
+    return Response.json({ ok: true, encrypted_payload: row?.encrypted_payload || '' });
+  }
+  return Response.json({ ok: false, error: 'Wrong backup operation.' }, { status: 403 });
+}
+
+async function durableGameReviewsApi(request, env) {
+  if (request.method === 'GET') {
+    const gameKey = String(new URL(request.url).searchParams.get('game') || '').toLowerCase();
+    if (!/^[a-z0-9-]{2,60}$/.test(gameKey)) return Response.json({ ok: false, error: 'Game is invalid.' }, { status: 400 });
+    const [rows, totals] = await Promise.all([
+      env.DB.prepare(`SELECT full_name, rating, comment, created_at FROM skillland_game_reviews
+        WHERE game_key=? ORDER BY datetime(updated_at) DESC, id DESC LIMIT 4`).bind(gameKey).all(),
+      env.DB.prepare('SELECT COUNT(*) AS total, AVG(rating) AS average FROM skillland_game_reviews WHERE game_key=?').bind(gameKey).first()
+    ]);
+    const reviews = (rows.results || []).map(row => ({ full_name: String(row.full_name || 'Участник SkillLand'), rating: Number(row.rating || 0), comment: String(row.comment || ''), created_at: row.created_at || '', avatar_url: '' }));
+    return Response.json({ ok: true, reviews, total: Number(totals?.total || 0), average: Number(totals?.average || 0), shown: reviews.length }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+  }
+  const body = await requestJson(request);
+  const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
+  if (!grant || grant.operation !== 'game_review_upsert') return Response.json({ ok: false, error: 'Review ticket expired.' }, { status: 401 });
+  const profile = cleanDirectoryMirrorProfile(grant.profile);
+  const gameKey = String(grant.game_key || '').toLowerCase();
+  const rating = Math.round(Number(grant.rating));
+  const comment = String(grant.comment || '').trim().slice(0, 1000);
+  if (!profile || !/^[a-z0-9-]{2,60}$/.test(gameKey) || rating < 1 || rating > 5 || comment.length < 3) {
+    return Response.json({ ok: false, error: 'Review is invalid.' }, { status: 400 });
+  }
+  await env.DB.prepare(`INSERT INTO skillland_game_reviews(game_key, directory_id, full_name, rating, comment, created_at, updated_at)
+    VALUES(?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ON CONFLICT(game_key,directory_id) DO UPDATE SET full_name=excluded.full_name, rating=excluded.rating, comment=excluded.comment, updated_at=CURRENT_TIMESTAMP`)
+    .bind(gameKey, profile.directoryId, profile.fullName, rating, comment).run();
+  return Response.json({ ok: true });
 }
 
 async function upsertUser(profile, env) {
@@ -983,6 +1037,12 @@ export default {
     }
     if (path === '/api/skillland-directory/application' && request.method === 'POST') {
       return directoryApplicationsApi(request, env);
+    }
+    if (path === '/api/skillland-durable/account' && request.method === 'POST') {
+      return durableAccountApi(request, env);
+    }
+    if (path === '/api/skillland-durable/game-reviews' && (request.method === 'GET' || request.method === 'POST')) {
+      return durableGameReviewsApi(request, env);
     }
     if (path === '/api/auth/session') return privateApi(session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 }));
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
