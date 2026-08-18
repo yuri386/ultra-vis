@@ -173,6 +173,12 @@ function cleanDirectoryMirrorProfile(profile) {
   };
 }
 
+async function directoryIdForEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(normalized));
+  return base64urlEncode(new Uint8Array(digest));
+}
+
 async function exchangeDirectoryMirrorTicket(ticket, env) {
   if (!/^[a-f0-9]{64}$/i.test(String(ticket || ''))) return null;
   try {
@@ -210,6 +216,25 @@ async function upsertDirectoryProfile(profile, env) {
     .run();
 }
 
+// Some people had already opened Ultra VIS before the directory mirror was
+// introduced. Their safe public summary is already in D1, so seed it once the
+// bridge is first used rather than waiting for every person to sign in again.
+async function backfillLegacyDirectory(env) {
+  const legacy = await env.DB.prepare(`SELECT skillland_user_id, email, full_name, skillland_role, skillland_headline
+    FROM users WHERE email <> '' ORDER BY id ASC LIMIT 200`).all();
+  await Promise.all((legacy.results || []).map(async row => {
+    const fullName = String(row.full_name || '').trim().slice(0, 120);
+    const skillLandUserId = Number(row.skillland_user_id);
+    if (!fullName || !Number.isInteger(skillLandUserId) || skillLandUserId < 1) return;
+    const directoryId = await directoryIdForEmail(row.email);
+    await env.DB.prepare(`INSERT OR IGNORE INTO skillland_directory_profiles
+      (directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url, updated_at)
+      VALUES (?, ?, ?, ?, ?, '', '', '', '[]', '', '', '', CURRENT_TIMESTAMP)`)
+      .bind(directoryId, skillLandUserId, fullName, row.skillland_role === 'employer' ? 'employer' : 'student', String(row.skillland_headline || '').slice(0, 180))
+      .run();
+  }));
+}
+
 async function directoryMirrorApi(request, path, env) {
   const body = await requestJson(request);
   const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
@@ -218,12 +243,14 @@ async function directoryMirrorApi(request, path, env) {
     if (grant.operation !== 'sync') return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
     const profile = cleanDirectoryMirrorProfile(grant.profile);
     if (!profile) return Response.json({ ok: false, error: 'Profile is invalid.' }, { status: 400 });
+    await backfillLegacyDirectory(env);
     await upsertDirectoryProfile(profile, env);
     return Response.json({ ok: true });
   }
   if (path === '/api/skillland-directory/list') {
     const role = grant.operation === 'list' && (grant.target_role === 'student' || grant.target_role === 'employer') ? grant.target_role : '';
     if (!role) return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
+    await backfillLegacyDirectory(env);
     const rows = await env.DB.prepare(`SELECT directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url
       FROM skillland_directory_profiles WHERE role = ? ORDER BY datetime(updated_at) DESC LIMIT 200`).bind(role).all();
     const profiles = (rows.results || []).map(row => {
