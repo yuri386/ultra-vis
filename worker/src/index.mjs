@@ -1050,17 +1050,19 @@ export default {
     if (path.startsWith('/api/content/')) return privateApi(await contentApi(request, path, session, env, executionContext));
 
     if (path === '/auth/skillland' && request.method === 'GET') {
-      const callback = `${url.origin}/auth/skillland/callback`;
+      const language = ['en', 'ru', 'kk'].includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : '';
+      const callback = `${url.origin}/auth/skillland/callback${language ? `?lang=${encodeURIComponent(language)}` : ''}`;
       return redirect(`${env.SKILLLAND_URL.replace(/\/$/, '')}/api/ultravis/continue?return_to=${encodeURIComponent(callback)}`);
     }
 
     if (path === '/auth/skillland/callback' && request.method === 'POST') {
       const form = await request.formData();
       const profile = await exchangeSkillLandTicket(String(form.get('ticket') || ''), env);
-      if (!profile) return redirect('/?error=skillland-session-expired');
+      const language = ['en', 'ru', 'kk'].includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : '';
+      if (!profile) return redirect(`/?error=skillland-session-expired${language ? `&lang=${encodeURIComponent(language)}` : ''}`);
       const user = await upsertUser(profile, env);
       const token = await createSession(user, env.JWT_SECRET);
-      return redirect('/', 302, { 'Set-Cookie': sessionCookie(token) });
+      return redirect(`/${language ? `?lang=${encodeURIComponent(language)}` : ''}`, 302, { 'Set-Cookie': sessionCookie(token) });
     }
 
     // Sessions created before the private SkillLand progress bridge existed are
