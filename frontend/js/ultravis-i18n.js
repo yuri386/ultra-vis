@@ -34,7 +34,12 @@
   ];
   const lookup = new Map();
   rows.forEach(([en, ru, kk]) => [en, ru, kk].forEach(source => lookup.set(normalize(source), { en, ru, kk })));
-  const translate = value => lookup.get(normalize(value))?.[language] || value;
+  const translate = value => {
+    const raw = String(value || '');
+    const match = lookup.get(normalize(raw));
+    if (!match) return value;
+    return `${raw.match(/^\s*/)?.[0] || ''}${match[language]}${raw.match(/\s*$/)?.[0] || ''}`;
+  };
 
   function translateTree(root = document) {
     const target = root.nodeType === Node.TEXT_NODE ? root.parentElement : root;
