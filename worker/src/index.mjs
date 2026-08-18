@@ -148,6 +148,107 @@ async function exchangeSkillLandTicket(ticket, env) {
   }
 }
 
+function cleanDirectoryMirrorProfile(profile) {
+  const directoryId = String(profile?.directory_id || '').trim();
+  const fullName = String(profile?.full_name || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  const skillLandUserId = Number(profile?.skillland_user_id);
+  if (!/^[A-Za-z0-9_-]{32,64}$/.test(directoryId) || !Number.isInteger(skillLandUserId) || skillLandUserId < 1 || fullName.length < 2) return null;
+  const skills = Array.isArray(profile?.skills)
+    ? profile.skills.map(item => String(item || '').trim().slice(0, 60)).filter(Boolean).slice(0, 20)
+    : [];
+  return {
+    directoryId,
+    skillLandUserId,
+    fullName,
+    role: profile?.role === 'employer' ? 'employer' : 'student',
+    headline: String(profile?.headline || '').trim().slice(0, 180),
+    bio: String(profile?.bio || '').trim().slice(0, 1200),
+    city: String(profile?.city || '').trim().slice(0, 120),
+    specialty: String(profile?.specialty || '').trim().slice(0, 160),
+    skills,
+    company: String(profile?.company || '').trim().slice(0, 160),
+    employmentType: String(profile?.employment_type || '').trim().slice(0, 120),
+    // Binary avatar files stay on SkillLand storage and are never mirrored.
+    avatarUrl: ''
+  };
+}
+
+async function exchangeDirectoryMirrorTicket(ticket, env) {
+  if (!/^[a-f0-9]{64}$/i.test(String(ticket || ''))) return null;
+  try {
+    const response = await fetchWithTimeout(`${env.SKILLLAND_URL.replace(/\/$/, '')}/api/directory-mirror/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ ticket })
+    }, 7000);
+    if (!response.ok) return null;
+    const payload = await response.json();
+    return payload?.ok ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+async function upsertDirectoryProfile(profile, env) {
+  await env.DB.prepare(`INSERT INTO skillland_directory_profiles
+    (directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(directory_id) DO UPDATE SET
+      skillland_user_id=excluded.skillland_user_id,
+      full_name=excluded.full_name,
+      role=excluded.role,
+      headline=excluded.headline,
+      bio=excluded.bio,
+      city=excluded.city,
+      specialty=excluded.specialty,
+      skills_json=excluded.skills_json,
+      company=excluded.company,
+      employment_type=excluded.employment_type,
+      avatar_url=excluded.avatar_url,
+      updated_at=CURRENT_TIMESTAMP`)
+    .bind(profile.directoryId, profile.skillLandUserId, profile.fullName, profile.role, profile.headline, profile.bio, profile.city, profile.specialty, JSON.stringify(profile.skills), profile.company, profile.employmentType, profile.avatarUrl)
+    .run();
+}
+
+async function directoryMirrorApi(request, path, env) {
+  const body = await requestJson(request);
+  const grant = await exchangeDirectoryMirrorTicket(String(body?.ticket || ''), env);
+  if (!grant) return Response.json({ ok: false, error: 'Directory ticket expired.' }, { status: 401 });
+  if (path === '/api/skillland-directory/sync') {
+    if (grant.operation !== 'sync') return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
+    const profile = cleanDirectoryMirrorProfile(grant.profile);
+    if (!profile) return Response.json({ ok: false, error: 'Profile is invalid.' }, { status: 400 });
+    await upsertDirectoryProfile(profile, env);
+    return Response.json({ ok: true });
+  }
+  if (path === '/api/skillland-directory/list') {
+    const role = grant.operation === 'list' && (grant.target_role === 'student' || grant.target_role === 'employer') ? grant.target_role : '';
+    if (!role) return Response.json({ ok: false, error: 'Wrong directory ticket.' }, { status: 403 });
+    const rows = await env.DB.prepare(`SELECT directory_id, skillland_user_id, full_name, role, headline, bio, city, specialty, skills_json, company, employment_type, avatar_url
+      FROM skillland_directory_profiles WHERE role = ? ORDER BY datetime(updated_at) DESC LIMIT 200`).bind(role).all();
+    const profiles = (rows.results || []).map(row => {
+      let skills = [];
+      try { skills = JSON.parse(row.skills_json || '[]'); } catch {}
+      return {
+        directory_id: row.directory_id,
+        skillland_user_id: Number(row.skillland_user_id),
+        full_name: row.full_name,
+        role: row.role,
+        headline: row.headline || '',
+        bio: row.bio || '',
+        city: row.city || '',
+        specialty: row.specialty || '',
+        skills: Array.isArray(skills) ? skills : [],
+        company: row.company || '',
+        employment_type: row.employment_type || '',
+        avatar_url: row.avatar_url || ''
+      };
+    });
+    return Response.json({ ok: true, profiles }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+  }
+  return Response.json({ ok: false, error: 'Not found.' }, { status: 404 });
+}
+
 async function upsertUser(profile, env) {
   const existing = await env.DB.prepare('SELECT id, skillland_user_id, email, full_name, nickname FROM users WHERE skillland_user_id = ? OR email = ? LIMIT 1')
     .bind(profile.id, profile.email)
@@ -769,6 +870,9 @@ export default {
     const session = await readSession(request, env.JWT_SECRET);
 
     if (path === '/api/health') return Response.json({ ok: true, service: 'ultravis', database: 'cloudflare-d1' });
+    if ((path === '/api/skillland-directory/sync' || path === '/api/skillland-directory/list') && request.method === 'POST') {
+      return directoryMirrorApi(request, path, env);
+    }
     if (path === '/api/auth/session') return privateApi(session ? Response.json({ authenticated: true, user: session }) : Response.json({ authenticated: false }, { status: 401 }));
     if (path === '/api/auth/logout' && request.method === 'POST') return Response.json({ success: true }, { headers: { 'Set-Cookie': expiredSessionCookie() } });
     if (path === '/api/assistant' && request.method === 'POST') return privateApi(await ultraVisAssistant(request, session, env));
