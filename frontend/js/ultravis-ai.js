@@ -12,7 +12,7 @@
   if (!dock || !form || !toggle || !input || !mic || !send || !chat || !messages || !close || !backdrop) return;
 
   const language = document.documentElement.lang === 'kk' ? 'kk' : document.documentElement.lang === 'en' ? 'en' : 'ru';
-  const labels = {ru:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI думает',open:'Открыть',error:'Не удалось выполнить запрос. Попробуй ещё раз.',listen:'Говорите — я слушаю.',unsupported:'Голосовой ввод недоступен в этом браузере. Можно написать сообщение текстом.'},en:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI is thinking',open:'Open',error:'The request could not be completed. Try again.',listen:'Speak — I am listening.',unsupported:'Voice input is not available in this browser. You can type instead.'},kk:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI ойланып жатыр',open:'Ашу',error:'Сұрауды орындай алмадым. Қайта көріңіз.',listen:'Сөйлеңіз — тыңдап тұрмын.',unsupported:'Бұл браузерде дауыспен енгізу қолжетімсіз. Хабарламаны жаза аласыз.'}}[language];
+  const labels = {ru:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI думает',open:'Открыть',edit:'Редактировать фото AI',error:'Не удалось выполнить запрос. Попробуй ещё раз.',listen:'Говорите — я слушаю.',unsupported:'Голосовой ввод недоступен в этом браузере. Можно написать сообщение текстом.'},en:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI is thinking',open:'Open',edit:'Edit photo AI',error:'The request could not be completed. Try again.',listen:'Speak — I am listening.',unsupported:'Voice input is not available in this browser. You can type instead.'},kk:{ai:'ULTRA VIS AI',thinking:'Ultra VIS AI ойланып жатыр',open:'Ашу',edit:'AI фото өңдеу',error:'Сұрауды орындай алмадым. Қайта көріңіз.',listen:'Сөйлеңіз — тыңдап тұрмын.',unsupported:'Бұл браузерде дауыспен енгізу қолжетімсіз. Хабарламаны жаза аласыз.'}}[language];
   let recognition = null;
   let voiceMode = false;
   const api = async (url, options = {}) => {
@@ -35,6 +35,19 @@
   const stopRecognition = () => { if (recognition) { try { recognition.stop(); } catch {} recognition = null; } mic.classList.remove('is-listening'); };
   const removeVoiceUI = () => { voiceMode = false; stopRecognition(); document.body.classList.remove('ultra-ai-voice-open'); document.querySelector('.ultra-ai-voice-stage')?.remove(); document.querySelector('.ultra-ai-voice-close')?.remove(); };
   const closeChat = () => { removeVoiceUI(); document.body.classList.remove('ultra-ai-chat-open'); collapse(); };
+  const openPhotoEdit = () => {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    location.assign(`https://skillland-platform-yuri386.onrender.com/ai-photo-edit.html?lang=${encodeURIComponent(language)}&return=${encodeURIComponent(returnTo)}`);
+  };
+  const addPhotoEditButton = () => {
+    if (chat.querySelector('.ultra-ai-photo-edit')) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ultra-ai-photo-edit';
+    button.textContent = labels.edit;
+    button.addEventListener('click', openPhotoEdit);
+    chat.appendChild(button);
+  };
   const openView = (view, id) => {
     if (view === 'profile') { location.href = 'https://skillland-platform-yuri386.onrender.com/profile.html'; return; }
     const route = view === 'lecture' ? 'lectures' : view === 'college' ? 'colleges' : view;
@@ -84,6 +97,7 @@
     item.onerror=()=>{if(voiceMode)prompt.textContent=labels.unsupported;};item.onend=()=>{if(recognition===item)recognition=null;if(voiceMode&&finalText.trim())askVoice(finalText.trim(),answer,prompt,dot);};try{item.start();}catch{prompt.textContent=labels.unsupported;}
   }
   toggle.addEventListener('click',()=>dock.classList.contains('is-expanded')&&!input.value?collapse():expand());
+  addPhotoEditButton();
   mic.addEventListener('click',startDictation);input.addEventListener('input',sync);
   form.addEventListener('submit',async event=>{event.preventDefault();if(!dock.classList.contains('is-expanded')){expand();return;}const message=input.value.trim();if(!message){startVoiceMode();return;}document.body.classList.add('ultra-ai-chat-open');append('user',message);input.value='';sync();send.disabled=true;const loader=thinking();try{const result=await requestAI(message);loader.remove();append('assistant',result.reply,result);}catch(error){loader.remove();append('assistant',error.message||labels.error);}finally{send.disabled=false;input.focus();}});
   close.addEventListener('click',closeChat);backdrop.addEventListener('click',closeChat);document.addEventListener('keydown',event=>{if(event.key==='Escape'&&(document.body.classList.contains('ultra-ai-chat-open')||voiceMode))closeChat();});
