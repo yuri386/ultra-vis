@@ -36,7 +36,7 @@
   const removeVoiceUI = () => { voiceMode = false; stopRecognition(); document.body.classList.remove('ultra-ai-voice-open'); document.querySelector('.ultra-ai-voice-stage')?.remove(); document.querySelector('.ultra-ai-voice-close')?.remove(); };
   const closeChat = () => { removeVoiceUI(); document.body.classList.remove('ultra-ai-chat-open'); collapse(); };
   const openPhotoEdit = () => {
-    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    const returnTo = `${location.origin}${location.pathname}${location.search}${location.hash}`;
     location.assign(`https://skillland-platform-yuri386.onrender.com/ai-photo-edit.html?lang=${encodeURIComponent(language)}&return=${encodeURIComponent(returnTo)}`);
   };
   const addPhotoEditButton = () => {
