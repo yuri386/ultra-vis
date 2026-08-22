@@ -8,6 +8,14 @@
   document.head.append(style);
   const interactive = target => target?.closest('input,textarea,select,button,[contenteditable="true"],.ultra-ai-messages,.ultra-ai-chat,.vis-workspace');
   if (!reduce.matches && matchMedia('(pointer:fine)').matches) addEventListener('wheel', event => { if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || interactive(event.target)) return; event.preventDefault(); scrollBy({ top:event.deltaY*.78, behavior:'auto' }); }, {passive:false});
+  // The chat is available even for visitors who prefer reduced motion.
+  if (!window.UltraVisLiquidChat && !document.querySelector('script[data-ultravis-liquid-chat]')) {
+    const liquidChat = document.createElement('script');
+    liquidChat.src = '/js/ultravis-liquid-ai.js';
+    liquidChat.defer = true;
+    liquidChat.dataset.ultravisLiquidChat = 'true';
+    document.head.append(liquidChat);
+  }
   if (reduce.matches || !('IntersectionObserver' in window)) return;
   const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.08,rootMargin:'0px 0px -7% 0px'});
   [...document.querySelectorAll('main > section,main > article,.ultra-minimal-links,.ultra-feature-gallery,.footer,.ultra-footer')].forEach((target,index)=>{target.classList.add('uv-reveal');target.style.transitionDelay=`${Math.min(index%5,3)*45}ms`;observer.observe(target)});
